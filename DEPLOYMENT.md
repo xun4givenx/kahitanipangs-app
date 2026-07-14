@@ -50,21 +50,39 @@ Sign up, and you'll get a working, persistent account backed by your Supabase pr
 
 ## 5. Put it online
 
-The build output is a standard Next.js app. Host it anywhere that runs Next 14 (it uses
-server API routes + middleware, so it needs a Node/serverless host — not static-only
-hosting). When you connect your host:
+This `app/` folder is its own self-contained git repo (branch `main`) and is meant to be
+deployed **as the repository root** — not as a subfolder of the parent `money-manager`
+repo. The parent repo only tracks `app/` as a gitlink and does **not** contain the app
+source, so deploy from this repo directly.
 
-- **Root directory:** `app` (the Next.js app lives in this subfolder, not the repo root).
-- **Build command:** `npm run build`   **Output:** handled by Next automatically.
-- **Environment variables:** add the same `NEXT_PUBLIC_SUPABASE_URL`,
-  `NEXT_PUBLIC_SUPABASE_ANON_KEY` (and optional `OPENAI_API_KEY`) in the host's
-  dashboard.
+### 5a. Push this app to its own GitHub repo
 
-### Vercel (typical)
-1. Import the GitHub repo.
-2. Set **Root Directory** to `app`.
-3. Add the environment variables above.
-4. Deploy.
+From inside the `app/` folder:
+
+```bash
+# Create an empty repo on GitHub first (e.g. "money-manager-app"), then:
+git remote add origin git@github.com:YOUR-USERNAME/money-manager-app.git
+git push -u origin main
+```
+
+`.env.local` is gitignored, so your Supabase keys are **not** pushed — you'll add them in
+the host dashboard instead (next step).
+
+### 5b. Import to Vercel
+
+Any Node/serverless host that runs Next 14 works (the app uses server API routes +
+middleware, so it is **not** static-only). Vercel is the typical choice:
+
+1. **Import** the `money-manager-app` GitHub repo you just pushed.
+2. **Root Directory:** leave as `./` (this repo's root *is* the Next.js app — do **not**
+   set it to `app`).
+3. **Framework preset:** Next.js (auto-detected). Build command `npm run build` and
+   output are handled automatically.
+4. **Environment variables** — add these (same names as `.env.local`):
+   - `NEXT_PUBLIC_SUPABASE_URL` = `https://hxhgusybmacxffczesxk.supabase.co`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = your `sb_publishable_…` key
+   - `OPENAI_API_KEY` *(optional — only enables AI debt-payoff advice)*
+5. **Deploy.**
 
 ## Notes
 
