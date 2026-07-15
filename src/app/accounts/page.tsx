@@ -15,7 +15,7 @@ import {
 import { toast } from "sonner";
 import { formatCurrency, ACCOUNT_TYPES } from "@/lib/utils/finance";
 import type { Account } from "@/types/database";
-import { Plus, Trash2, Pencil } from "lucide-react";
+import { Plus, Trash2, Pencil, Wallet } from "lucide-react";
 
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -66,7 +66,7 @@ export default function AccountsPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Accounts</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Accounts</h1>
             <p className="text-muted-foreground">Manage your bank accounts and wallets</p>
           </div>
           <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setEditing(null); }}>
@@ -107,27 +107,42 @@ export default function AccountsPage() {
           </Dialog>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {accounts.map((a) => (
-            <Card key={a.id} style={{ borderLeftColor: a.color, borderLeftWidth: 4 }}>
-              <CardContent className="flex items-center justify-between p-6">
-                <div>
-                  <h3 className="text-lg font-semibold">{a.name}</h3>
-                  <p className="text-sm capitalize text-muted-foreground">{a.type}</p>
-                  <p className="mt-2 text-2xl font-bold">{formatCurrency(a.balance)}</p>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <Button variant="ghost" size="icon" onClick={() => {
-                    setEditing(a);
-                    setForm({ name: a.name, type: a.type, balance: String(a.balance), currency: a.currency, color: a.color });
-                    setOpen(true);
-                  }}><Pencil className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleDelete(a.id)}><Trash2 className="h-4 w-4" /></Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {accounts.length ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {accounts.map((a) => (
+              <Card
+                key={a.id}
+                className="transition-colors hover:bg-accent/40"
+                style={{ borderLeftColor: a.color, borderLeftWidth: 4 }}
+              >
+                <CardContent className="flex items-center justify-between p-6">
+                  <div>
+                    <h3 className="text-lg font-semibold">{a.name}</h3>
+                    <p className="text-sm capitalize text-muted-foreground">{a.type}</p>
+                    <p className="mt-2 text-2xl font-bold">{formatCurrency(a.balance)}</p>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Button variant="ghost" size="icon" onClick={() => {
+                      setEditing(a);
+                      setForm({ name: a.name, type: a.type, balance: String(a.balance), currency: a.currency, color: a.color });
+                      setOpen(true);
+                    }}><Pencil className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(a.id)}><Trash2 className="h-4 w-4" /></Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center gap-2 py-16 text-center">
+              <Wallet className="h-10 w-10 text-muted-foreground/40" />
+              <p className="text-sm text-muted-foreground">
+                No accounts yet — add your first account to start tracking balances.
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </AppShell>
   );

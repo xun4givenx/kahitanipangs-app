@@ -8,10 +8,12 @@ import {
   Wallet,
   Tags,
   CreditCard,
+  HandCoins,
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
@@ -21,6 +23,7 @@ const navItems = [
   { href: "/accounts", label: "Accounts", icon: Wallet },
   { href: "/categories", label: "Categories", icon: Tags },
   { href: "/debts", label: "Debts", icon: CreditCard },
+  { href: "/loans", label: "Loans", icon: HandCoins },
 ];
 
 export function Sidebar() {
@@ -62,15 +65,16 @@ export function Sidebar() {
           );
         })}
       </nav>
-      <div className="border-t p-4">
+      <div className="flex items-center justify-between gap-2 border-t p-4">
         <Button
           variant="ghost"
-          className="w-full justify-start gap-3"
+          className="flex-1 justify-start gap-3"
           onClick={handleLogout}
         >
           <LogOut className="h-4 w-4" />
           Sign out
         </Button>
+        <ThemeToggle />
       </div>
     </aside>
   );

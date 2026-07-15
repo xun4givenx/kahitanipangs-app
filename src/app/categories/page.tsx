@@ -16,7 +16,7 @@ import {
 import { toast } from "sonner";
 import { CATEGORY_COLORS } from "@/lib/utils/finance";
 import type { Category } from "@/types/database";
-import { Plus, Trash2, Pencil } from "lucide-react";
+import { Plus, Trash2, Pencil, Tags } from "lucide-react";
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -65,7 +65,7 @@ export default function CategoriesPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Categories</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Categories</h1>
             <p className="text-muted-foreground">Organize your income and expenses</p>
           </div>
           <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setEditing(null); }}>
@@ -119,7 +119,10 @@ export default function CategoriesPage() {
                 <h2 className="mb-4 text-lg font-semibold">{section.title}</h2>
                 <div className="space-y-2">
                   {section.items.map((c) => (
-                    <div key={c.id} className="flex items-center justify-between rounded-lg border p-3">
+                    <div
+                      key={c.id}
+                      className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-accent/40"
+                    >
                       <div className="flex items-center gap-3">
                         <div className="h-4 w-4 rounded-full" style={{ backgroundColor: c.color }} />
                         <span className="font-medium">{c.name}</span>
@@ -136,7 +139,12 @@ export default function CategoriesPage() {
                     </div>
                   ))}
                   {!section.items.length && (
-                    <p className="text-sm text-muted-foreground">No categories yet</p>
+                    <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
+                      <Tags className="h-8 w-8 text-muted-foreground/40" />
+                      <p className="text-sm text-muted-foreground">
+                        No {section.title.toLowerCase()} yet — add one to get organized.
+                      </p>
+                    </div>
                   )}
                 </div>
               </CardContent>

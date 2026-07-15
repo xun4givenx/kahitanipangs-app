@@ -1,4 +1,3 @@
-import OpenAI from "openai";
 import { getAuthUser, jsonError, jsonOk } from "@/lib/api-helpers";
 import { calculateDebtPayoff } from "@/lib/utils/finance";
 import type { Debt, DebtStrategy } from "@/types/database";
@@ -46,39 +45,10 @@ export async function POST(request: Request) {
     strategy
   );
 
-  let aiAdvice: string | null = null;
-
-  if (process.env.OPENAI_API_KEY) {
-    try {
-      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-      const debtSummary = debts
-        .map(
-          (d: Debt) =>
-            `${d.name}: $${d.balance} at ${d.interest_rate}% APR, min payment $${d.minimum_payment}`
-        )
-        .join("\n");
-
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a personal finance advisor. Provide concise, actionable debt payoff advice in 2-3 paragraphs.",
-          },
-          {
-            role: "user",
-            content: `I have these debts:\n${debtSummary}\n\nI'm using the ${strategy} strategy with a monthly budget of $${monthly_budget}. The plan will take ${monthsToPayoff} months and cost $${totalInterest} in interest. Please give me personalized advice.`,
-          },
-        ],
-        max_tokens: 500,
-      });
-
-      aiAdvice = completion.choices[0]?.message?.content ?? null;
-    } catch {
-      aiAdvice = "AI advice unavailable. Please check your OpenAI API key.";
-    }
-  }
+  const tip =
+    strategy === "avalanche"
+      ? "Avalanche strategy: paying down your highest-interest debt first minimizes total interest paid over time."
+      : "Snowball strategy: paying off your smallest balance first builds momentum with quick wins.";
 
   await auth.supabase
     .from("debt_plans")
@@ -92,7 +62,7 @@ export async function POST(request: Request) {
       strategy,
       monthly_budget,
       schedule,
-      ai_advice: aiAdvice,
+      ai_advice: tip,
       total_interest: totalInterest,
       months_to_payoff: monthsToPayoff,
       is_active: true,

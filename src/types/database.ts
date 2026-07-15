@@ -3,6 +3,7 @@ export type AccountType = "checking" | "savings" | "credit" | "cash" | "investme
 export type TransactionType = "income" | "expense" | "transfer";
 export type Frequency = "daily" | "weekly" | "biweekly" | "monthly" | "yearly";
 export type DebtStrategy = "avalanche" | "snowball";
+export type LoanFrequency = "daily" | "weekly" | "biweekly" | "monthly";
 
 export interface Category {
   id: string;
@@ -110,6 +111,23 @@ export interface DebtPayment {
   notes: string | null;
   created_at: string;
   debts?: Debt;
+}
+
+export interface Loan {
+  id: string;
+  user_id: string;
+  person_name: string;
+  total_amount: number;
+  interest_rate: number;
+  start_date: string;
+  frequency: LoanFrequency;
+  installments: number;
+  repayment_amount: number;
+  remaining_balance: number;
+  advanced_interest: boolean;
+  amount_released: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface DashboardStats {

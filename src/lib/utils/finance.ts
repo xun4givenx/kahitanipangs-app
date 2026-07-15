@@ -1,8 +1,8 @@
 import { addDays, addMonths, addWeeks, addYears, format, parseISO } from "date-fns";
 import type { Debt, DebtPlanMonth, DebtStrategy } from "@/types/database";
 
-export function formatCurrency(amount: number, currency = "USD") {
-  return new Intl.NumberFormat("en-US", {
+export function formatCurrency(amount: number, currency = "PHP") {
+  return new Intl.NumberFormat("en-PH", {
     style: "currency",
     currency,
   }).format(amount);

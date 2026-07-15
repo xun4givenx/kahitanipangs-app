@@ -117,6 +117,24 @@ CREATE TABLE public.debt_payments (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Loans ("Loans Out" — person-to-person lending)
+CREATE TABLE public.loans (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  person_name TEXT NOT NULL,
+  total_amount NUMERIC(12, 2) NOT NULL,
+  interest_rate NUMERIC(6, 3) NOT NULL DEFAULT 0,
+  start_date DATE NOT NULL,
+  frequency TEXT NOT NULL CHECK (frequency IN ('daily', 'weekly', 'biweekly', 'monthly')),
+  installments INTEGER NOT NULL DEFAULT 0,
+  repayment_amount NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  remaining_balance NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  advanced_interest BOOLEAN NOT NULL DEFAULT false,
+  amount_released NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- Indexes
 CREATE INDEX idx_categories_user_id ON public.categories(user_id);
 CREATE INDEX idx_accounts_user_id ON public.accounts(user_id);
@@ -128,6 +146,7 @@ CREATE INDEX idx_scheduled_transactions_next ON public.scheduled_transactions(ne
 CREATE INDEX idx_debts_user_id ON public.debts(user_id);
 CREATE INDEX idx_debt_plans_user_id ON public.debt_plans(user_id);
 CREATE INDEX idx_debt_payments_debt_id ON public.debt_payments(debt_id);
+CREATE INDEX idx_loans_user_id ON public.loans(user_id);
 
 -- updated_at trigger
 CREATE OR REPLACE FUNCTION public.handle_updated_at()
@@ -149,6 +168,8 @@ CREATE TRIGGER scheduled_transactions_updated_at BEFORE UPDATE ON public.schedul
 CREATE TRIGGER debts_updated_at BEFORE UPDATE ON public.debts
   FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 CREATE TRIGGER debt_plans_updated_at BEFORE UPDATE ON public.debt_plans
+  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+CREATE TRIGGER loans_updated_at BEFORE UPDATE ON public.loans
   FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
 -- Keep account balances in sync with transactions
@@ -239,6 +260,7 @@ ALTER TABLE public.scheduled_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.debts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.debt_plans ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.debt_payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.loans ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users manage own categories" ON public.categories
   FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
@@ -253,6 +275,8 @@ CREATE POLICY "Users manage own debts" ON public.debts
 CREATE POLICY "Users manage own debt plans" ON public.debt_plans
   FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users manage own debt payments" ON public.debt_payments
+  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users manage own loans" ON public.loans
   FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
 
 GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role;

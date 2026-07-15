@@ -21,7 +21,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { formatCurrency, formatDate, FREQUENCIES } from "@/lib/utils/finance";
 import type { Transaction, Account, Category, ScheduledTransaction } from "@/types/database";
-import { Plus, Copy, Trash2, Pencil, Repeat } from "lucide-react";
+import { Plus, Copy, Trash2, Pencil, Repeat, Receipt } from "lucide-react";
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -135,7 +135,7 @@ export default function TransactionsPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Transactions</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Transactions</h1>
             <p className="text-muted-foreground">Manage income, expenses, and recurring payments</p>
           </div>
           <div className="flex gap-2">
@@ -264,38 +264,47 @@ export default function TransactionsPage() {
           <TabsContent value="all">
             <Card>
               <CardContent className="pt-6">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Account</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead className="w-24" />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {transactions.map((t) => (
-                      <TableRow key={t.id}>
-                        <TableCell>{formatDate(t.date)}</TableCell>
-                        <TableCell>{t.description}</TableCell>
-                        <TableCell>{(t.accounts as { name: string })?.name}</TableCell>
-                        <TableCell>{(t.categories as { name: string })?.name || "—"}</TableCell>
-                        <TableCell className={`text-right font-medium ${t.type === "income" ? "text-green-600" : "text-red-600"}`}>
-                          {t.type === "income" ? "+" : "-"}{formatCurrency(t.amount)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => openEdit(t)}><Pencil className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDuplicate(t.id)}><Copy className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDelete(t.id)}><Trash2 className="h-4 w-4" /></Button>
-                          </div>
-                        </TableCell>
+                {transactions.length ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Account</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                        <TableHead className="w-24" />
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {transactions.map((t) => (
+                        <TableRow key={t.id}>
+                          <TableCell>{formatDate(t.date)}</TableCell>
+                          <TableCell>{t.description}</TableCell>
+                          <TableCell>{(t.accounts as { name: string })?.name}</TableCell>
+                          <TableCell>{(t.categories as { name: string })?.name || "—"}</TableCell>
+                          <TableCell className={`text-right font-medium ${t.type === "income" ? "text-green-600" : "text-red-600"}`}>
+                            {t.type === "income" ? "+" : "-"}{formatCurrency(t.amount)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => openEdit(t)}><Pencil className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" onClick={() => handleDuplicate(t.id)}><Copy className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" onClick={() => handleDelete(t.id)}><Trash2 className="h-4 w-4" /></Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
+                    <Receipt className="h-10 w-10 text-muted-foreground/40" />
+                    <p className="text-sm text-muted-foreground">
+                      No transactions yet — add your first income or expense.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -303,32 +312,41 @@ export default function TransactionsPage() {
             <Card>
               <CardHeader><CardTitle>Recurring Transactions</CardTitle></CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Frequency</TableHead>
-                      <TableHead>Next</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {scheduled.map((s) => (
-                      <TableRow key={s.id}>
-                        <TableCell>{s.description}</TableCell>
-                        <TableCell className="capitalize">{s.frequency}</TableCell>
-                        <TableCell>{formatDate(s.next_occurrence)}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(s.amount)}</TableCell>
-                        <TableCell>
-                          <Badge variant={s.is_active ? "default" : "secondary"}>
-                            {s.is_active ? "Active" : "Inactive"}
-                          </Badge>
-                        </TableCell>
+                {scheduled.length ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Frequency</TableHead>
+                        <TableHead>Next</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                        <TableHead>Status</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {scheduled.map((s) => (
+                        <TableRow key={s.id}>
+                          <TableCell>{s.description}</TableCell>
+                          <TableCell className="capitalize">{s.frequency}</TableCell>
+                          <TableCell>{formatDate(s.next_occurrence)}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(s.amount)}</TableCell>
+                          <TableCell>
+                            <Badge variant={s.is_active ? "default" : "secondary"}>
+                              {s.is_active ? "Active" : "Inactive"}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
+                    <Repeat className="h-10 w-10 text-muted-foreground/40" />
+                    <p className="text-sm text-muted-foreground">
+                      No recurring transactions set up yet.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

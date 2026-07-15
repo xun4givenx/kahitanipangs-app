@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils/finance";
 import type { Debt, DebtPlan, DebtPayment } from "@/types/database";
-import { Plus, Trash2, Pencil, Sparkles, DollarSign } from "lucide-react";
+import { Plus, Trash2, Pencil, Sparkles, DollarSign, CreditCard as CreditCardIcon, Receipt } from "lucide-react";
 
 export default function DebtsPage() {
   const [debts, setDebts] = useState<Debt[]>([]);
@@ -128,7 +128,7 @@ export default function DebtsPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Debt Tracker</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Debt Tracker</h1>
             <p className="text-muted-foreground">
               Total debt: {formatCurrency(totalDebt)} · Min payments: {formatCurrency(totalMinPayments)}/mo
             </p>
@@ -254,43 +254,52 @@ export default function DebtsPage() {
           <TabsContent value="debts">
             <Card>
               <CardContent className="pt-6">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Creditor</TableHead>
-                      <TableHead className="text-right">Balance</TableHead>
-                      <TableHead className="text-right">APR</TableHead>
-                      <TableHead className="text-right">Min Payment</TableHead>
-                      <TableHead className="w-24" />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {debts.map((d) => (
-                      <TableRow key={d.id}>
-                        <TableCell className="font-medium">{d.name}</TableCell>
-                        <TableCell>{d.creditor || "—"}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(d.balance)}</TableCell>
-                        <TableCell className="text-right">{d.interest_rate}%</TableCell>
-                        <TableCell className="text-right">{formatCurrency(d.minimum_payment)}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => {
-                              setEditing(d);
-                              setForm({
-                                name: d.name, creditor: d.creditor || "", balance: String(d.balance),
-                                interest_rate: String(d.interest_rate), minimum_payment: String(d.minimum_payment),
-                                due_day: d.due_day ? String(d.due_day) : "", notes: d.notes || "",
-                              });
-                              setOpen(true);
-                            }}><Pencil className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDelete(d.id)}><Trash2 className="h-4 w-4" /></Button>
-                          </div>
-                        </TableCell>
+                {debts.length ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Creditor</TableHead>
+                        <TableHead className="text-right">Balance</TableHead>
+                        <TableHead className="text-right">APR</TableHead>
+                        <TableHead className="text-right">Min Payment</TableHead>
+                        <TableHead className="w-24" />
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {debts.map((d) => (
+                        <TableRow key={d.id}>
+                          <TableCell className="font-medium">{d.name}</TableCell>
+                          <TableCell>{d.creditor || "—"}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(d.balance)}</TableCell>
+                          <TableCell className="text-right">{d.interest_rate}%</TableCell>
+                          <TableCell className="text-right">{formatCurrency(d.minimum_payment)}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => {
+                                setEditing(d);
+                                setForm({
+                                  name: d.name, creditor: d.creditor || "", balance: String(d.balance),
+                                  interest_rate: String(d.interest_rate), minimum_payment: String(d.minimum_payment),
+                                  due_day: d.due_day ? String(d.due_day) : "", notes: d.notes || "",
+                                });
+                                setOpen(true);
+                              }}><Pencil className="h-4 w-4" /></Button>
+                              <Button variant="ghost" size="icon" onClick={() => handleDelete(d.id)}><Trash2 className="h-4 w-4" /></Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
+                    <CreditCardIcon className="h-10 w-10 text-muted-foreground/40" />
+                    <p className="text-sm text-muted-foreground">
+                      No debts tracked yet — add one to start planning your payoff.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -318,20 +327,6 @@ export default function DebtsPage() {
                     </CardHeader>
                   </Card>
                 </div>
-
-                {activePlan.ai_advice && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <Sparkles className="h-5 w-5 text-yellow-500" />
-                        AI Advice
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="whitespace-pre-wrap text-sm leading-relaxed">{activePlan.ai_advice}</p>
-                    </CardContent>
-                  </Card>
-                )}
 
                 <Card>
                   <CardHeader><CardTitle>Month-by-Month Schedule</CardTitle></CardHeader>
@@ -387,28 +382,37 @@ export default function DebtsPage() {
           <TabsContent value="payments">
             <Card>
               <CardContent className="pt-6">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Debt</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead>Notes</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {payments.map((p) => (
-                      <TableRow key={p.id}>
-                        <TableCell>{p.payment_date}</TableCell>
-                        <TableCell>{(p.debts as { name: string })?.name}</TableCell>
-                        <TableCell className="text-right font-medium text-green-600">
-                          {formatCurrency(p.amount)}
-                        </TableCell>
-                        <TableCell>{p.notes || "—"}</TableCell>
+                {payments.length ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Debt</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                        <TableHead>Notes</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {payments.map((p) => (
+                        <TableRow key={p.id}>
+                          <TableCell>{p.payment_date}</TableCell>
+                          <TableCell>{(p.debts as { name: string })?.name}</TableCell>
+                          <TableCell className="text-right font-medium text-green-600">
+                            {formatCurrency(p.amount)}
+                          </TableCell>
+                          <TableCell>{p.notes || "—"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
+                    <Receipt className="h-10 w-10 text-muted-foreground/40" />
+                    <p className="text-sm text-muted-foreground">
+                      No payments recorded yet.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
