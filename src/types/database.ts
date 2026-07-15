@@ -4,6 +4,7 @@ export type TransactionType = "income" | "expense" | "transfer";
 export type Frequency = "daily" | "weekly" | "biweekly" | "monthly" | "yearly";
 export type DebtStrategy = "avalanche" | "snowball";
 export type LoanFrequency = "daily" | "weekly" | "biweekly" | "monthly";
+export type LoanCollectionKind = "collection" | "withdrawal";
 
 export interface Category {
   id: string;
@@ -126,8 +127,22 @@ export interface Loan {
   remaining_balance: number;
   advanced_interest: boolean;
   amount_released: number;
+  savings_balance: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface LoanCollection {
+  id: string;
+  user_id: string;
+  loan_id: string;
+  kind: LoanCollectionKind;
+  collection_date: string;
+  installment_amount: number;
+  collected_amount: number;
+  savings_delta: number;
+  note: string | null;
+  created_at: string;
 }
 
 export interface DashboardStats {

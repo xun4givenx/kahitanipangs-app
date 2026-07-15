@@ -11,9 +11,11 @@ import {
 } from "@/components/ui/table";
 import { formatCurrency, formatDate } from "@/lib/utils/finance";
 import type { Transaction, ScheduledTransaction, Account } from "@/types/database";
+import { AddSalaryDialog } from "@/components/add-salary-dialog";
 import {
   Wallet, TrendingUp, TrendingDown, CreditCard, Calendar,
   HandCoins, Receipt, PieChart as PieChartIcon, ArrowRight,
+  PiggyBank, CalendarCheck,
 } from "lucide-react";
 import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar, Cell, XAxis, YAxis,
@@ -38,6 +40,8 @@ interface DashboardData {
   monthlyExpenses: number;
   totalDebt: number;
   totalLoansOut: number;
+  totalSavingsHeld: number;
+  collectedToday: number;
   categorySpending: CategorySpending[];
   monthlySeries: MonthlyPoint[];
   recentTransactions: Transaction[];
@@ -65,11 +69,15 @@ export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetch("/api/dashboard")
+  function loadDashboard() {
+    return fetch("/api/dashboard")
       .then((r) => r.json())
       .then(setData)
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    loadDashboard();
   }, []);
 
   if (loading) {
@@ -98,9 +106,12 @@ export default function DashboardPage() {
   return (
     <AppShell>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">Overview of your financial health</p>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+            <p className="text-muted-foreground">Overview of your financial health</p>
+          </div>
+          <AddSalaryDialog onSuccess={loadDashboard} />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -249,7 +260,7 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardContent className="flex items-center justify-between gap-4 p-6">
               <div className="flex items-center gap-3">
@@ -285,6 +296,30 @@ export default function DashboardPage() {
                   Manage <ArrowRight className="ml-1 h-4 w-4" />
                 </Link>
               </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="flex items-center gap-3 p-6">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-chart-2/15">
+                <PiggyBank className="h-5 w-5 text-chart-2" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Savings held</p>
+                <p className="text-xl font-bold">{formatCurrency(data?.totalSavingsHeld || 0)}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="flex items-center gap-3 p-6">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-chart-5/15">
+                <CalendarCheck className="h-5 w-5 text-chart-5" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Collected today</p>
+                <p className="text-xl font-bold">{formatCurrency(data?.collectedToday || 0)}</p>
+              </div>
             </CardContent>
           </Card>
         </div>

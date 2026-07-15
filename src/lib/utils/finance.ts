@@ -12,6 +12,10 @@ export function formatDate(date: string) {
   return format(parseISO(date), "MMM d, yyyy");
 }
 
+export function roundUpToTens(n: number): number {
+  return Math.ceil(n / 10) * 10;
+}
+
 export function getNextOccurrence(
   current: string,
   frequency: string

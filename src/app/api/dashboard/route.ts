@@ -6,11 +6,12 @@ export async function GET() {
   if (!auth) return jsonError("Unauthorized", 401);
 
   const now = new Date();
+  const today = format(now, "yyyy-MM-dd");
   const monthStart = format(startOfMonth(now), "yyyy-MM-dd");
   const monthEnd = format(endOfMonth(now), "yyyy-MM-dd");
   const seriesStart = format(startOfMonth(subMonths(now, 5)), "yyyy-MM-dd");
 
-  const [accountsRes, transactionsRes, debtsRes, scheduledRes, seriesRes, loansRes] =
+  const [accountsRes, transactionsRes, debtsRes, scheduledRes, seriesRes, loansRes, collectionsTodayRes] =
     await Promise.all([
       auth.supabase.from("accounts").select("*").eq("is_active", true),
       auth.supabase
@@ -31,7 +32,12 @@ export async function GET() {
         .select("amount, type, date")
         .gte("date", seriesStart)
         .lte("date", monthEnd),
-      auth.supabase.from("loans").select("remaining_balance"),
+      auth.supabase.from("loans").select("remaining_balance, savings_balance"),
+      auth.supabase
+        .from("loan_collections")
+        .select("collected_amount")
+        .eq("kind", "collection")
+        .eq("collection_date", today),
     ]);
 
   const accounts = accountsRes.data || [];
@@ -40,6 +46,7 @@ export async function GET() {
   const upcoming = scheduledRes.data || [];
   const seriesTransactions = seriesRes.data || [];
   const loans = loansRes.data || [];
+  const collectionsToday = collectionsTodayRes.data || [];
 
   const totalBalance = accounts.reduce((s, a) => s + Number(a.balance), 0);
   const monthlyIncome = transactions
@@ -50,6 +57,8 @@ export async function GET() {
     .reduce((s, t) => s + Number(t.amount), 0);
   const totalDebt = debts.reduce((s, d) => s + Number(d.balance), 0);
   const totalLoansOut = loans.reduce((s, l) => s + Number(l.remaining_balance), 0);
+  const totalSavingsHeld = loans.reduce((s, l) => s + Number(l.savings_balance ?? 0), 0);
+  const collectedToday = collectionsToday.reduce((s, c) => s + Number(c.collected_amount), 0);
 
   // Category spending: current month's expenses grouped by category.
   const categoryMap = new Map<string, { name: string; amount: number; color: string | null }>();
@@ -93,6 +102,8 @@ export async function GET() {
     monthlyExpenses,
     totalDebt,
     totalLoansOut,
+    totalSavingsHeld,
+    collectedToday,
     categorySpending,
     monthlySeries,
     recentTransactions: recent || [],

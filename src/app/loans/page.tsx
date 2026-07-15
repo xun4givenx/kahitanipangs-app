@@ -13,10 +13,15 @@ import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { formatCurrency } from "@/lib/utils/finance";
-import type { Loan, LoanFrequency } from "@/types/database";
-import { Plus, Pencil, Trash2, HandCoins } from "lucide-react";
+import { formatCurrency, formatDate } from "@/lib/utils/finance";
+import type { Loan, LoanCollection, LoanFrequency } from "@/types/database";
+import {
+  Plus, Pencil, Trash2, HandCoins, Coins, Undo2, History, PiggyBank,
+} from "lucide-react";
 
 const frequencyOptions: { value: LoanFrequency; label: string }[] = [
   { value: "daily", label: "Daily" },
@@ -64,6 +69,13 @@ export default function LoansPage() {
   const [form, setForm] = useState(initialForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [collectingId, setCollectingId] = useState<string | null>(null);
+  const [refundLoan, setRefundLoan] = useState<Loan | null>(null);
+  const [refundAmount, setRefundAmount] = useState("");
+  const [refunding, setRefunding] = useState(false);
+  const [historyLoan, setHistoryLoan] = useState<Loan | null>(null);
+  const [historyRows, setHistoryRows] = useState<LoanCollection[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   async function load() {
     const res = await fetch("/api/loans");
@@ -155,6 +167,75 @@ export default function LoansPage() {
     toast.success("Loan deleted");
     if (editingId === id) resetForm();
     load();
+  }
+
+  function updateLoanRow(updated: Loan) {
+    setLoans((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+  }
+
+  async function handleCollect(loan: Loan) {
+    setCollectingId(loan.id);
+    const res = await fetch(`/api/loans/${loan.id}/collections`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind: "collection" }),
+    });
+    setCollectingId(null);
+
+    if (!res.ok) {
+      toast.error("Failed to record collection");
+      return;
+    }
+    const { collection, loan: updatedLoan } = await res.json();
+    updateLoanRow(updatedLoan);
+    toast.success(
+      `Collected ${formatCurrency(collection.collected_amount)} · ${formatCurrency(collection.savings_delta)} to savings`
+    );
+  }
+
+  function openRefund(loan: Loan) {
+    setRefundLoan(loan);
+    setRefundAmount(String(loan.savings_balance || 0));
+  }
+
+  async function handleRefund(e: React.FormEvent) {
+    e.preventDefault();
+    if (!refundLoan) return;
+    const amount = Number(refundAmount);
+    if (!amount || amount <= 0) {
+      toast.error("Enter a valid amount");
+      return;
+    }
+
+    setRefunding(true);
+    const res = await fetch(`/api/loans/${refundLoan.id}/collections`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ kind: "withdrawal", amount }),
+    });
+    setRefunding(false);
+
+    if (!res.ok) {
+      toast.error("Failed to refund savings");
+      return;
+    }
+    const { loan: updatedLoan } = await res.json();
+    updateLoanRow(updatedLoan);
+    toast.success(`Refunded ${formatCurrency(amount)} to ${refundLoan.person_name}`);
+    setRefundLoan(null);
+  }
+
+  async function openHistory(loan: Loan) {
+    setHistoryLoan(loan);
+    setHistoryLoading(true);
+    const res = await fetch(`/api/loans/${loan.id}/collections`);
+    setHistoryLoading(false);
+    if (!res.ok) {
+      toast.error("Failed to load collection history");
+      setHistoryRows([]);
+      return;
+    }
+    setHistoryRows(await res.json());
   }
 
   return (
@@ -309,32 +390,62 @@ export default function LoansPage() {
                     <TableHead className="text-right">Payment</TableHead>
                     <TableHead>Frequency</TableHead>
                     <TableHead>Next due</TableHead>
-                    <TableHead className="w-20" />
+                    <TableHead className="text-right">Savings held</TableHead>
+                    <TableHead className="w-44" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loans.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
+                      <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
                         <HandCoins className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
                         No loans yet. Add your first borrower to get started.
                       </TableCell>
                     </TableRow>
                   ) : (
                     loans.map((loan) => (
-                      <TableRow key={loan.id}>
+                      <TableRow key={loan.id} className="hover:bg-muted/40">
                         <TableCell className="font-medium">{loan.person_name}</TableCell>
                         <TableCell className="text-right">{formatCurrency(loan.total_amount || 0)}</TableCell>
                         <TableCell className="text-right">{formatCurrency(loan.remaining_balance || 0)}</TableCell>
                         <TableCell className="text-right">{formatCurrency(getMonthlyFlow(loan))}</TableCell>
                         <TableCell className="capitalize">{loan.frequency}</TableCell>
                         <TableCell>{getNextPaymentDate(loan)}</TableCell>
+                        <TableCell className="text-right">
+                          <span className="inline-flex items-center gap-1 font-medium text-chart-2">
+                            <PiggyBank className="h-3.5 w-3.5" />
+                            {formatCurrency(loan.savings_balance || 0)}
+                          </span>
+                        </TableCell>
                         <TableCell>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => handleEdit(loan)}>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={collectingId === loan.id}
+                              onClick={() => handleCollect(loan)}
+                              title="Record today's collection"
+                            >
+                              <Coins className="mr-1 h-3.5 w-3.5" />
+                              Collect
+                            </Button>
+                            {Number(loan.savings_balance || 0) > 0 && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openRefund(loan)}
+                                title="Refund savings"
+                              >
+                                <Undo2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <Button variant="ghost" size="icon" onClick={() => openHistory(loan)} title="Collection history">
+                              <History className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleEdit(loan)} title="Edit loan">
                               <Pencil className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDelete(loan.id)}>
+                            <Button variant="ghost" size="icon" onClick={() => handleDelete(loan.id)} title="Delete loan">
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -348,6 +459,76 @@ export default function LoansPage() {
           </Card>
         </div>
       </div>
+
+      <Dialog open={!!refundLoan} onOpenChange={(v) => { if (!v) setRefundLoan(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Refund savings{refundLoan ? ` · ${refundLoan.person_name}` : ""}</DialogTitle>
+          </DialogHeader>
+          {refundLoan && (
+            <form onSubmit={handleRefund} className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                {refundLoan.person_name} has {formatCurrency(refundLoan.savings_balance || 0)} in refundable savings.
+              </p>
+              <div className="space-y-2">
+                <Label>Amount to refund</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max={refundLoan.savings_balance || 0}
+                  value={refundAmount}
+                  onChange={(e) => setRefundAmount(e.target.value)}
+                  required
+                />
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setRefundLoan(null)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={refunding}>
+                  {refunding ? "Refunding..." : "Refund"}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!historyLoan} onOpenChange={(v) => { if (!v) { setHistoryLoan(null); setHistoryRows([]); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Collection history{historyLoan ? ` · ${historyLoan.person_name}` : ""}</DialogTitle>
+          </DialogHeader>
+          {historyLoading ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">Loading...</p>
+          ) : historyRows.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">No collections recorded yet.</p>
+          ) : (
+            <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+              {historyRows.map((row) => (
+                <div
+                  key={row.id}
+                  className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm"
+                >
+                  <div>
+                    <p className="font-medium capitalize">{row.kind}</p>
+                    <p className="text-xs text-muted-foreground">{formatDate(row.collection_date)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium">
+                      {row.kind === "collection" ? formatCurrency(row.collected_amount) : `-${formatCurrency(-row.savings_delta)}`}
+                    </p>
+                    {row.kind === "collection" && (
+                      <p className="text-xs text-chart-2">+{formatCurrency(row.savings_delta)} savings</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
