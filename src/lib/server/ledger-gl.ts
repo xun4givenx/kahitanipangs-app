@@ -1,4 +1,11 @@
-import type { LedgerAccountType, NormalBalance, Book, LedgerAccount } from "@/types/database";
+import type {
+  LedgerAccountType,
+  NormalBalance,
+  Book,
+  LedgerAccount,
+  JournalStatus,
+  JournalEntryWithLines,
+} from "@/types/database";
 import type { createClient } from "@/lib/supabase/server";
 import type { LedgerResult } from "@/lib/server/ledger";
 
@@ -304,4 +311,165 @@ export async function deactivateAccount(
     .single();
   if (error) return { ok: false, error: error.message };
   return { ok: true, data: data as LedgerAccount };
+}
+
+// ---- Journal entries (Supabase-backed) ----
+
+export interface CreateJournalEntryInput {
+  entry_date: string;
+  memo?: string | null;
+  reference?: string | null;
+  status?: JournalStatus;
+  lines: JournalLineInput[];
+}
+
+const ENTRY_SELECT = "*, journal_lines(*, ledger_accounts(*))";
+
+export async function createJournalEntry(
+  supabase: SupabaseClient,
+  userId: string,
+  input: CreateJournalEntryInput
+): Promise<LedgerResult<JournalEntryWithLines>> {
+  const status: JournalStatus = input.status ?? "posted";
+  const lines = input.lines ?? [];
+
+  if (!input.entry_date) return { ok: false, error: "Entry date is required" };
+
+  if (status === "posted") {
+    const check = validatePostedLines(lines);
+    if (!check.ok) return { ok: false, error: check.error };
+  } else {
+    for (const line of lines) {
+      if (line.debit || line.credit) {
+        const res = validateLine(line);
+        if (!res.ok) return { ok: false, error: res.error };
+      }
+    }
+  }
+
+  const { data: entry, error: entryError } = await supabase
+    .from("journal_entries")
+    .insert({
+      user_id: userId,
+      entry_date: input.entry_date,
+      memo: input.memo ?? null,
+      reference: input.reference ?? null,
+      status,
+    })
+    .select()
+    .single();
+  if (entryError || !entry) {
+    return { ok: false, error: entryError?.message ?? "Failed to create entry" };
+  }
+
+  const lineRows = lines
+    .filter((l) => Number(l.debit || 0) > 0 || Number(l.credit || 0) > 0)
+    .map((l) => ({
+      user_id: userId,
+      journal_entry_id: entry.id,
+      ledger_account_id: l.ledger_account_id,
+      debit: roundMoney(Number(l.debit || 0)),
+      credit: roundMoney(Number(l.credit || 0)),
+      line_memo: l.line_memo ?? null,
+    }));
+
+  const { error: linesError } = await supabase.from("journal_lines").insert(lineRows);
+  if (linesError) {
+    // best-effort rollback of the orphan header
+    await supabase.from("journal_entries").delete().eq("id", entry.id);
+    return { ok: false, error: linesError.message };
+  }
+
+  return getJournalEntry(supabase, entry.id);
+}
+
+export async function listJournalEntries(
+  supabase: SupabaseClient,
+  filters?: { from?: string; to?: string }
+): Promise<LedgerResult<JournalEntryWithLines[]>> {
+  let query = supabase.from("journal_entries").select(ENTRY_SELECT);
+  if (filters?.from) query = query.gte("entry_date", filters.from);
+  if (filters?.to) query = query.lte("entry_date", filters.to);
+  const { data, error } = await query
+    .order("entry_date", { ascending: false })
+    .order("created_at", { ascending: false });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, data: data as JournalEntryWithLines[] };
+}
+
+export async function getJournalEntry(
+  supabase: SupabaseClient,
+  id: string
+): Promise<LedgerResult<JournalEntryWithLines>> {
+  const { data, error } = await supabase
+    .from("journal_entries")
+    .select(ENTRY_SELECT)
+    .eq("id", id)
+    .single();
+  if (error) return { ok: false, error: error.message, status: 404 };
+  return { ok: true, data: data as JournalEntryWithLines };
+}
+
+export async function updateJournalEntry(
+  supabase: SupabaseClient,
+  id: string,
+  input: CreateJournalEntryInput
+): Promise<LedgerResult<JournalEntryWithLines>> {
+  const status: JournalStatus = input.status ?? "posted";
+  const lines = input.lines ?? [];
+
+  if (status === "posted") {
+    const check = validatePostedLines(lines);
+    if (!check.ok) return { ok: false, error: check.error };
+  }
+
+  const { error: updateError } = await supabase
+    .from("journal_entries")
+    .update({
+      entry_date: input.entry_date,
+      memo: input.memo ?? null,
+      reference: input.reference ?? null,
+      status,
+    })
+    .eq("id", id);
+  if (updateError) return { ok: false, error: updateError.message };
+
+  // Replace lines wholesale (simplest correct approach for an edit).
+  const { error: delError } = await supabase
+    .from("journal_lines")
+    .delete()
+    .eq("journal_entry_id", id);
+  if (delError) return { ok: false, error: delError.message };
+
+  const { data: entry } = await supabase
+    .from("journal_entries")
+    .select("user_id")
+    .eq("id", id)
+    .single();
+  const userId = entry?.user_id as string;
+
+  const lineRows = lines
+    .filter((l) => Number(l.debit || 0) > 0 || Number(l.credit || 0) > 0)
+    .map((l) => ({
+      user_id: userId,
+      journal_entry_id: id,
+      ledger_account_id: l.ledger_account_id,
+      debit: roundMoney(Number(l.debit || 0)),
+      credit: roundMoney(Number(l.credit || 0)),
+      line_memo: l.line_memo ?? null,
+    }));
+
+  const { error: insError } = await supabase.from("journal_lines").insert(lineRows);
+  if (insError) return { ok: false, error: insError.message };
+
+  return getJournalEntry(supabase, id);
+}
+
+export async function deleteJournalEntry(
+  supabase: SupabaseClient,
+  id: string
+): Promise<LedgerResult<{ success: true }>> {
+  const { error } = await supabase.from("journal_entries").delete().eq("id", id);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, data: { success: true } };
 }
