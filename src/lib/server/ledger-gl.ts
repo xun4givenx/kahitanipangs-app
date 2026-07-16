@@ -1,4 +1,8 @@
-import type { LedgerAccountType, NormalBalance, Book } from "@/types/database";
+import type { LedgerAccountType, NormalBalance, Book, LedgerAccount } from "@/types/database";
+import type { createClient } from "@/lib/supabase/server";
+import type { LedgerResult } from "@/lib/server/ledger";
+
+type SupabaseClient = ReturnType<typeof createClient>;
 
 // ---- Pure ledger math (no Supabase; unit-tested) ----
 
@@ -178,3 +182,126 @@ export const DEFAULT_COA: {
   { code: "5000", name: "Supplies", type: "expense" },
   { code: "5100", name: "Fees", type: "expense" },
 ];
+
+// ---- Chart of Accounts (Supabase-backed) ----
+
+export interface CreateAccountInput {
+  code: string;
+  name: string;
+  type: LedgerAccountType;
+  book: Book;
+  subtype?: string | null;
+  parent_id?: string | null;
+  description?: string | null;
+}
+
+export type UpdateAccountInput = Partial<{
+  code: string;
+  name: string;
+  type: LedgerAccountType;
+  book: Book;
+  subtype: string | null;
+  parent_id: string | null;
+  description: string | null;
+  is_active: boolean;
+}>;
+
+export async function seedDefaultCoA(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<LedgerResult<{ inserted: number }>> {
+  const { count } = await supabase
+    .from("ledger_accounts")
+    .select("*", { count: "exact", head: true });
+
+  if (count && count > 0) return { ok: true, data: { inserted: 0 } };
+
+  const books: Book[] = ["business", "personal"];
+  const rows = books.flatMap((book) =>
+    DEFAULT_COA.map((a) => ({
+      user_id: userId,
+      code: a.code,
+      name: a.name,
+      type: a.type,
+      subtype: a.subtype ?? null,
+      book,
+      normal_balance: normalBalanceFor(a.type),
+      is_active: true,
+    }))
+  );
+
+  const { error } = await supabase.from("ledger_accounts").insert(rows);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, data: { inserted: rows.length } };
+}
+
+export async function listAccounts(
+  supabase: SupabaseClient
+): Promise<LedgerResult<LedgerAccount[]>> {
+  const { data, error } = await supabase
+    .from("ledger_accounts")
+    .select("*")
+    .order("book", { ascending: true })
+    .order("code", { ascending: true });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, data: data as LedgerAccount[] };
+}
+
+export async function createAccount(
+  supabase: SupabaseClient,
+  userId: string,
+  input: CreateAccountInput
+): Promise<LedgerResult<LedgerAccount>> {
+  if (!input.code || !input.name || !input.type || !input.book) {
+    return { ok: false, error: "Code, name, type, and book are required" };
+  }
+  const { data, error } = await supabase
+    .from("ledger_accounts")
+    .insert({
+      user_id: userId,
+      code: input.code,
+      name: input.name,
+      type: input.type,
+      subtype: input.subtype ?? null,
+      book: input.book,
+      normal_balance: normalBalanceFor(input.type),
+      parent_id: input.parent_id ?? null,
+      description: input.description ?? null,
+      is_active: true,
+    })
+    .select()
+    .single();
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, data: data as LedgerAccount };
+}
+
+export async function updateAccount(
+  supabase: SupabaseClient,
+  id: string,
+  patch: UpdateAccountInput
+): Promise<LedgerResult<LedgerAccount>> {
+  const next: Record<string, unknown> = { ...patch };
+  if (patch.type) next.normal_balance = normalBalanceFor(patch.type);
+  const { data, error } = await supabase
+    .from("ledger_accounts")
+    .update(next)
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, data: data as LedgerAccount };
+}
+
+export async function deactivateAccount(
+  supabase: SupabaseClient,
+  id: string
+): Promise<LedgerResult<LedgerAccount>> {
+  const { data, error } = await supabase
+    .from("ledger_accounts")
+    .update({ is_active: false })
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, data: data as LedgerAccount };
+}
