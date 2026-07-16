@@ -155,3 +155,52 @@ export interface DashboardStats {
   recentTransactions: Transaction[];
   upcomingPayments: ScheduledTransaction[];
 }
+
+// ---- General Ledger (double-entry) ----
+export type LedgerAccountType = "asset" | "liability" | "equity" | "income" | "expense";
+export type Book = "personal" | "business";
+export type NormalBalance = "debit" | "credit";
+export type JournalStatus = "draft" | "posted";
+
+export interface LedgerAccount {
+  id: string;
+  user_id: string;
+  code: string;
+  name: string;
+  type: LedgerAccountType;
+  subtype: string | null;
+  book: Book;
+  normal_balance: NormalBalance;
+  parent_id: string | null;
+  is_active: boolean;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface JournalEntry {
+  id: string;
+  user_id: string;
+  entry_date: string;
+  memo: string | null;
+  reference: string | null;
+  status: JournalStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface JournalLine {
+  id: string;
+  user_id: string;
+  journal_entry_id: string;
+  ledger_account_id: string;
+  debit: number;
+  credit: number;
+  line_memo: string | null;
+  created_at: string;
+  ledger_accounts?: LedgerAccount;
+}
+
+export interface JournalEntryWithLines extends JournalEntry {
+  journal_lines: JournalLine[];
+}
