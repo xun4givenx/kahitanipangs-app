@@ -78,6 +78,11 @@ export function validatePostedLines(
   return { ok: true };
 }
 
+/** Drops lines with neither a debit nor a credit (blank/placeholder rows). */
+export function stripEmptyLines(lines: JournalLineInput[]): JournalLineInput[] {
+  return lines.filter((l) => Number(l.debit || 0) > 0 || Number(l.credit || 0) > 0);
+}
+
 export function computeAccountBalance(
   normal: NormalBalance,
   debitTotal: number,
@@ -332,14 +337,15 @@ export async function createJournalEntry(
 ): Promise<LedgerResult<JournalEntryWithLines>> {
   const status: JournalStatus = input.status ?? "posted";
   const lines = input.lines ?? [];
+  const activeLines = stripEmptyLines(lines);
 
   if (!input.entry_date) return { ok: false, error: "Entry date is required" };
 
   if (status === "posted") {
-    const check = validatePostedLines(lines);
+    const check = validatePostedLines(activeLines);
     if (!check.ok) return { ok: false, error: check.error };
   } else {
-    for (const line of lines) {
+    for (const line of activeLines) {
       if (line.debit || line.credit) {
         const res = validateLine(line);
         if (!res.ok) return { ok: false, error: res.error };
@@ -362,16 +368,14 @@ export async function createJournalEntry(
     return { ok: false, error: entryError?.message ?? "Failed to create entry" };
   }
 
-  const lineRows = lines
-    .filter((l) => Number(l.debit || 0) > 0 || Number(l.credit || 0) > 0)
-    .map((l) => ({
-      user_id: userId,
-      journal_entry_id: entry.id,
-      ledger_account_id: l.ledger_account_id,
-      debit: roundMoney(Number(l.debit || 0)),
-      credit: roundMoney(Number(l.credit || 0)),
-      line_memo: l.line_memo ?? null,
-    }));
+  const lineRows = activeLines.map((l) => ({
+    user_id: userId,
+    journal_entry_id: entry.id,
+    ledger_account_id: l.ledger_account_id,
+    debit: roundMoney(Number(l.debit || 0)),
+    credit: roundMoney(Number(l.credit || 0)),
+    line_memo: l.line_memo ?? null,
+  }));
 
   const { error: linesError } = await supabase.from("journal_lines").insert(lineRows);
   if (linesError) {
@@ -417,9 +421,10 @@ export async function updateJournalEntry(
 ): Promise<LedgerResult<JournalEntryWithLines>> {
   const status: JournalStatus = input.status ?? "posted";
   const lines = input.lines ?? [];
+  const activeLines = stripEmptyLines(lines);
 
   if (status === "posted") {
-    const check = validatePostedLines(lines);
+    const check = validatePostedLines(activeLines);
     if (!check.ok) return { ok: false, error: check.error };
   }
 
@@ -448,16 +453,14 @@ export async function updateJournalEntry(
     .single();
   const userId = entry?.user_id as string;
 
-  const lineRows = lines
-    .filter((l) => Number(l.debit || 0) > 0 || Number(l.credit || 0) > 0)
-    .map((l) => ({
-      user_id: userId,
-      journal_entry_id: id,
-      ledger_account_id: l.ledger_account_id,
-      debit: roundMoney(Number(l.debit || 0)),
-      credit: roundMoney(Number(l.credit || 0)),
-      line_memo: l.line_memo ?? null,
-    }));
+  const lineRows = activeLines.map((l) => ({
+    user_id: userId,
+    journal_entry_id: id,
+    ledger_account_id: l.ledger_account_id,
+    debit: roundMoney(Number(l.debit || 0)),
+    credit: roundMoney(Number(l.credit || 0)),
+    line_memo: l.line_memo ?? null,
+  }));
 
   const { error: insError } = await supabase.from("journal_lines").insert(lineRows);
   if (insError) return { ok: false, error: insError.message };

@@ -7,6 +7,7 @@ import {
   computeAccountBalance,
   buildTrialBalance,
   DEFAULT_COA,
+  stripEmptyLines,
   type JournalLineInput,
 } from "@/lib/server/ledger-gl";
 
@@ -71,6 +72,37 @@ describe("isBalanced / validatePostedLines", () => {
       { ledger_account_id: "b", debit: 0, credit: 0.3 },
     ];
     expect(isBalanced(noisy)).toBe(true);
+  });
+});
+
+describe("stripEmptyLines", () => {
+  it("drops lines with neither a debit nor a credit", () => {
+    const lines: JournalLineInput[] = [
+      { ledger_account_id: "a", debit: 100, credit: 0 },
+      { ledger_account_id: "blank", debit: 0, credit: 0 },
+      { ledger_account_id: "b", debit: 0, credit: 100 },
+    ];
+    const result = stripEmptyLines(lines);
+    expect(result).toHaveLength(2);
+    expect(result.map((l) => l.ledger_account_id)).toEqual(["a", "b"]);
+  });
+
+  it("keeps debit-only and credit-only lines", () => {
+    const debitOnly: JournalLineInput = { ledger_account_id: "a", debit: 50, credit: 0 };
+    const creditOnly: JournalLineInput = { ledger_account_id: "b", debit: 0, credit: 50 };
+    expect(stripEmptyLines([debitOnly, creditOnly])).toEqual([debitOnly, creditOnly]);
+  });
+
+  it("lets a balanced pair with a trailing blank row pass posted validation once stripped", () => {
+    const lines: JournalLineInput[] = [
+      { ledger_account_id: "a", debit: 100, credit: 0 },
+      { ledger_account_id: "b", debit: 0, credit: 100 },
+      { ledger_account_id: "blank", debit: 0, credit: 0 },
+    ];
+    // Raw lines fail because of the blank row...
+    expect(validatePostedLines(lines).ok).toBe(false);
+    // ...but stripped lines pass.
+    expect(validatePostedLines(stripEmptyLines(lines)).ok).toBe(true);
   });
 });
 
