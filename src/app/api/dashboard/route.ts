@@ -1,5 +1,6 @@
 import { getAuthUser, jsonError, jsonOk } from "@/lib/api-helpers";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { loanProfit } from "@/lib/utils/finance";
 
 export async function GET() {
   const auth = await getAuthUser();
@@ -32,7 +33,11 @@ export async function GET() {
         .select("amount, type, date")
         .gte("date", seriesStart)
         .lte("date", monthEnd),
-      auth.supabase.from("loans").select("remaining_balance, savings_balance"),
+      auth.supabase
+        .from("loans")
+        .select(
+          "total_amount, interest_rate, advanced_interest, amount_released, remaining_balance, savings_balance"
+        ),
       auth.supabase
         .from("loan_collections")
         .select("collected_amount")
@@ -59,6 +64,8 @@ export async function GET() {
   const totalLoansOut = loans.reduce((s, l) => s + Number(l.remaining_balance), 0);
   const totalSavingsHeld = loans.reduce((s, l) => s + Number(l.savings_balance ?? 0), 0);
   const collectedToday = collectionsToday.reduce((s, c) => s + Number(c.collected_amount), 0);
+  const totalExpectedProfit = loans.reduce((s, l) => s + loanProfit(l).expected, 0);
+  const totalRealizedProfit = loans.reduce((s, l) => s + loanProfit(l).realized, 0);
 
   // Category spending: current month's expenses grouped by category.
   const categoryMap = new Map<string, { name: string; amount: number; color: string | null }>();
@@ -104,6 +111,8 @@ export async function GET() {
     totalLoansOut,
     totalSavingsHeld,
     collectedToday,
+    totalExpectedProfit,
+    totalRealizedProfit,
     categorySpending,
     monthlySeries,
     recentTransactions: recent || [],

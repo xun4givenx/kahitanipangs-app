@@ -1,5 +1,9 @@
 import { getAuthUser, jsonError, jsonOk } from "@/lib/api-helpers";
-import { applyLoanCollection, applyLoanWithdrawal } from "@/lib/server/ledger";
+import {
+  applyLoanCollection,
+  applyLoanWithdrawal,
+  ensureCashCollectionsAccount,
+} from "@/lib/server/ledger";
 
 export async function GET(
   _request: Request,
@@ -36,6 +40,22 @@ export async function POST(
     });
 
     if (!result.ok) return jsonError(result.error, result.status ?? 500);
+
+    const { collection, loan } = result.data;
+    const cashAccountId = await ensureCashCollectionsAccount(auth.supabase, auth.user.id);
+
+    const { error: txError } = await auth.supabase.from("transactions").insert({
+      user_id: auth.user.id,
+      account_id: cashAccountId,
+      amount: collection.collected_amount,
+      type: "income",
+      description: "Loan collection – " + loan.person_name,
+      date: collection.collection_date,
+      loan_id: params.id,
+    });
+
+    if (txError) return jsonError(txError.message, 500);
+
     return jsonOk(result.data, 201);
   }
 
@@ -46,5 +66,21 @@ export async function POST(
   });
 
   if (!result.ok) return jsonError(result.error, result.status ?? 500);
+
+  const { loan } = result.data;
+  const cashAccountId = await ensureCashCollectionsAccount(auth.supabase, auth.user.id);
+
+  const { error: txError } = await auth.supabase.from("transactions").insert({
+    user_id: auth.user.id,
+    account_id: cashAccountId,
+    amount: Number(body.amount),
+    type: "expense",
+    description: "Savings refund – " + loan.person_name,
+    date: new Date().toISOString().split("T")[0],
+    loan_id: params.id,
+  });
+
+  if (txError) return jsonError(txError.message, 500);
+
   return jsonOk(result.data, 201);
 }

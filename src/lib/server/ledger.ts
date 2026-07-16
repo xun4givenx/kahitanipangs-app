@@ -25,6 +25,47 @@ interface ApplyDebtPaymentParams {
   notes?: string | null;
 }
 
+const CASH_COLLECTIONS_ACCOUNT_NAME = "Cash on Collected Loans";
+
+/**
+ * Gets or creates the "Cash on Collected Loans" account for a user, returning
+ * its id. Used to deposit collected cash / withdraw savings refunds without
+ * requiring the user to pick an account.
+ */
+export async function ensureCashCollectionsAccount(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<string> {
+  const { data: existing } = await supabase
+    .from("accounts")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("name", CASH_COLLECTIONS_ACCOUNT_NAME)
+    .maybeSingle();
+
+  if (existing) return existing.id;
+
+  const { data: created, error } = await supabase
+    .from("accounts")
+    .insert({
+      user_id: userId,
+      name: CASH_COLLECTIONS_ACCOUNT_NAME,
+      type: "cash",
+      balance: 0,
+      currency: "PHP",
+      color: "#10b981",
+      is_active: true,
+    })
+    .select("id")
+    .single();
+
+  if (error || !created) {
+    throw new Error(error?.message ?? "Failed to create Cash on Collected Loans account");
+  }
+
+  return created.id;
+}
+
 /**
  * Records a loan collection (an installment collected from a borrower) and
  * updates the loan's remaining balance + borrower savings balance.

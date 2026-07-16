@@ -42,6 +42,8 @@ interface DashboardData {
   totalLoansOut: number;
   totalSavingsHeld: number;
   collectedToday: number;
+  totalExpectedProfit: number;
+  totalRealizedProfit: number;
   categorySpending: CategorySpending[];
   monthlySeries: MonthlyPoint[];
   recentTransactions: Transaction[];
@@ -258,6 +260,27 @@ export default function DashboardPage() {
               )}
             </CardContent>
           </Card>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex items-center gap-3 rounded-xl bg-muted/40 p-4 shadow-sm">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-chart-3/15">
+              <TrendingUp className="h-5 w-5 text-chart-3" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Expected profit</p>
+              <p className="text-xl font-bold">{formatCurrency(data?.totalExpectedProfit || 0)}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 rounded-xl bg-muted/40 p-4 shadow-sm">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-chart-2/15">
+              <PiggyBank className="h-5 w-5 text-chart-2" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Realized profit</p>
+              <p className="text-xl font-bold">{formatCurrency(data?.totalRealizedProfit || 0)}</p>
+            </div>
+          </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

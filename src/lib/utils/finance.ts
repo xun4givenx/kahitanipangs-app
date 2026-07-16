@@ -1,5 +1,5 @@
 import { addDays, addMonths, addWeeks, addYears, format, parseISO } from "date-fns";
-import type { Debt, DebtPlanMonth, DebtStrategy } from "@/types/database";
+import type { Debt, DebtPlanMonth, DebtStrategy, Loan } from "@/types/database";
 
 export function formatCurrency(amount: number, currency = "PHP") {
   return new Intl.NumberFormat("en-PH", {
@@ -14,6 +14,26 @@ export function formatDate(date: string) {
 
 export function roundUpToTens(n: number): number {
   return Math.ceil(n / 10) * 10;
+}
+
+type LoanProfitInput = Pick<
+  Loan,
+  "total_amount" | "interest_rate" | "advanced_interest" | "amount_released" | "remaining_balance"
+>;
+
+/**
+ * Computes expected (full interest) and realized (cash-basis) profit for a loan.
+ * See docs/superpowers/specs/2026-07-16-loan-cash-and-profit-design.md ("Profit definitions").
+ */
+export function loanProfit(loan: LoanProfitInput): { expected: number; realized: number } {
+  const totalAmount = Number(loan.total_amount);
+  const interest = (totalAmount * Number(loan.interest_rate)) / 100;
+  const expected = interest;
+  const originalDue = loan.advanced_interest ? totalAmount : totalAmount + interest;
+  const recovered = originalDue - Number(loan.remaining_balance);
+  const realized = Math.min(Math.max(recovered - Number(loan.amount_released), 0), expected);
+
+  return { expected, realized };
 }
 
 export function getNextOccurrence(

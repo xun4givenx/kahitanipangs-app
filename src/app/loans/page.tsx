@@ -17,10 +17,11 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { formatCurrency, formatDate } from "@/lib/utils/finance";
-import type { Loan, LoanCollection, LoanFrequency } from "@/types/database";
+import { formatCurrency, formatDate, loanProfit } from "@/lib/utils/finance";
+import type { Account, Loan, LoanCollection, LoanFrequency } from "@/types/database";
 import {
   Plus, Pencil, Trash2, HandCoins, Coins, Undo2, History, PiggyBank, Receipt,
+  TrendingUp, Wallet,
 } from "lucide-react";
 
 const frequencyOptions: { value: LoanFrequency; label: string }[] = [
@@ -79,6 +80,7 @@ export default function LoansPage() {
   const [collectLoan, setCollectLoan] = useState<Loan | null>(null);
   const [collectForm, setCollectForm] = useState({ amount: "", date: new Date().toISOString().split("T")[0] });
   const [collectingManual, setCollectingManual] = useState(false);
+  const [cashAccount, setCashAccount] = useState<Account | null>(null);
 
   async function load() {
     const res = await fetch("/api/loans");
@@ -90,7 +92,26 @@ export default function LoansPage() {
     setLoans(data);
   }
 
-  useEffect(() => { load(); }, []);
+  async function loadCashAccount() {
+    const res = await fetch("/api/accounts");
+    if (!res.ok) return;
+    const data: Account[] = await res.json();
+    setCashAccount(data.find((a) => a.name === "Cash on Collected Loans") || null);
+  }
+
+  useEffect(() => { load(); loadCashAccount(); }, []);
+
+  const profitTotals = useMemo(() => {
+    return loans.reduce(
+      (acc, loan) => {
+        const { expected, realized } = loanProfit(loan);
+        acc.expected += expected;
+        acc.realized += realized;
+        return acc;
+      },
+      { expected: 0, realized: 0 }
+    );
+  }, [loans]);
 
   function resetForm() {
     setForm(initialForm);
@@ -191,6 +212,7 @@ export default function LoansPage() {
     }
     const { collection, loan: updatedLoan } = await res.json();
     updateLoanRow(updatedLoan);
+    loadCashAccount();
     toast.success(
       `Collected ${formatCurrency(collection.collected_amount)} · ${formatCurrency(collection.savings_delta)} to savings`
     );
@@ -231,6 +253,7 @@ export default function LoansPage() {
     }
     const { collection, loan: updatedLoan } = await res.json();
     updateLoanRow(updatedLoan);
+    loadCashAccount();
     toast.success(
       `Collected ${formatCurrency(collection.collected_amount)} · ${formatCurrency(collection.savings_delta)} to savings`
     );
@@ -265,6 +288,7 @@ export default function LoansPage() {
     }
     const { loan: updatedLoan } = await res.json();
     updateLoanRow(updatedLoan);
+    loadCashAccount();
     toast.success(`Refunded ${formatCurrency(amount)} to ${refundLoan.person_name}`);
     setRefundLoan(null);
   }
@@ -290,6 +314,36 @@ export default function LoansPage() {
           <p className="text-muted-foreground">
             Track borrowers, automatically calculate payments, and monitor loan cash flow.
           </p>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="flex items-center gap-3 rounded-xl bg-muted/40 p-4 shadow-sm">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-chart-3/15">
+              <TrendingUp className="h-5 w-5 text-chart-3" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Total expected profit</p>
+              <p className="text-xl font-bold">{formatCurrency(profitTotals.expected)}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 rounded-xl bg-muted/40 p-4 shadow-sm">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-chart-2/15">
+              <Coins className="h-5 w-5 text-chart-2" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Total realized profit</p>
+              <p className="text-xl font-bold">{formatCurrency(profitTotals.realized)}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 rounded-xl bg-muted/40 p-4 shadow-sm">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/15">
+              <Wallet className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Cash on Collected Loans</p>
+              <p className="text-xl font-bold">{formatCurrency(cashAccount?.balance || 0)}</p>
+            </div>
+          </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
@@ -435,19 +489,23 @@ export default function LoansPage() {
                     <TableHead>Frequency</TableHead>
                     <TableHead>Next due</TableHead>
                     <TableHead className="text-right">Savings held</TableHead>
+                    <TableHead className="text-right">Profit</TableHead>
                     <TableHead className="w-44" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loans.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
+                      <TableCell colSpan={9} className="py-10 text-center text-muted-foreground">
                         <HandCoins className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
                         No loans yet. Add your first borrower to get started.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    loans.map((loan) => (
+                    loans.map((loan) => {
+                      const { expected, realized } = loanProfit(loan);
+                      const progress = expected > 0 ? Math.min(100, (realized / expected) * 100) : 0;
+                      return (
                       <TableRow key={loan.id} className="hover:bg-muted/40">
                         <TableCell className="font-medium">{loan.person_name}</TableCell>
                         <TableCell className="text-right">{formatCurrency(loan.total_amount || 0)}</TableCell>
@@ -460,6 +518,18 @@ export default function LoansPage() {
                             <PiggyBank className="h-3.5 w-3.5" />
                             {formatCurrency(loan.savings_balance || 0)}
                           </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="ml-auto w-32">
+                            <p className="font-semibold text-foreground">{formatCurrency(expected)}</p>
+                            <p className="text-xs text-chart-2">{formatCurrency(realized)} earned</p>
+                            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                              <div
+                                className="h-full rounded-full bg-chart-2"
+                                style={{ width: `${progress}%` }}
+                              />
+                            </div>
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center justify-end gap-1">
@@ -503,7 +573,8 @@ export default function LoansPage() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>
