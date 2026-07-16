@@ -13,7 +13,9 @@
     /* Brand accent: indigo/violet (hue ~264-277). Used for --primary, --ring,
        and active nav state. Chosen for AA-passing contrast against both
        white (light) and near-black (dark) surfaces. */
-    --background: oklch(1 0 0);
+    /* Faint cool-gray tint so the near-white --card visibly floats above
+       the page background (soft & elevated look). */
+    --background: oklch(0.985 0.004 250);
     --foreground: oklch(0.145 0 0);
     --card: oklch(1 0 0);
     --card-foreground: oklch(0.145 0 0);
@@ -50,11 +52,13 @@
     --sidebar-ring: oklch(0.511 0.262 276.966);
   }
   .dark {
-    --background: oklch(0.145 0 0);
+    /* Near-black page background with a visibly lighter --card so cards
+       read as elevated surfaces (soft & elevated look). */
+    --background: oklch(0.13 0 0);
     --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
+    --card: oklch(0.22 0 0);
     --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
+    --popover: oklch(0.22 0 0);
     --popover-foreground: oklch(0.985 0 0);
     --primary: oklch(0.673 0.182 276.935);
     --primary-foreground: oklch(0.145 0 0);

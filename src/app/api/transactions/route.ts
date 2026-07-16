@@ -1,4 +1,5 @@
 import { getAuthUser, jsonError, jsonOk } from "@/lib/api-helpers";
+import { applyDebtPayment, applyLoanCollection } from "@/lib/server/ledger";
 
 export async function GET(request: Request) {
   const auth = await getAuthUser();
@@ -27,11 +28,13 @@ export async function POST(request: Request) {
   if (!auth) return jsonError("Unauthorized", 401);
 
   const body = await request.json();
-  const { account_id, category_id, amount, type, description, notes, date } = body;
+  const { account_id, category_id, amount, type, description, notes, date, loan_id, debt_id } = body;
 
   if (!account_id || !amount || !type) {
     return jsonError("Account, amount, and type are required");
   }
+
+  const transactionDate = date || new Date().toISOString().split("T")[0];
 
   const { data, error } = await auth.supabase
     .from("transactions")
@@ -43,11 +46,38 @@ export async function POST(request: Request) {
       type,
       description: description || "",
       notes,
-      date: date || new Date().toISOString().split("T")[0],
+      date: transactionDate,
+      loan_id: loan_id ?? null,
+      debt_id: debt_id ?? null,
     })
     .select("*, accounts(name), categories(name)")
     .single();
 
   if (error) return jsonError(error.message, 500);
-  return jsonOk(data, 201);
+
+  let linkedLoan = null;
+  let linkedDebt = null;
+
+  if (loan_id && type === "income") {
+    const result = await applyLoanCollection(auth.supabase, auth.user.id, loan_id, {
+      collectedAmount: Number(amount),
+      collectionDate: transactionDate,
+    });
+
+    if (!result.ok) return jsonError(result.error, result.status ?? 500);
+    linkedLoan = result.data.loan;
+  }
+
+  if (debt_id && type === "expense") {
+    const result = await applyDebtPayment(auth.supabase, auth.user.id, debt_id, {
+      amount: Number(amount),
+      paymentDate: transactionDate,
+      notes,
+    });
+
+    if (!result.ok) return jsonError(result.error, result.status ?? 500);
+    linkedDebt = result.data.debt;
+  }
+
+  return jsonOk({ ...data, loan: linkedLoan, debt: linkedDebt }, 201);
 }

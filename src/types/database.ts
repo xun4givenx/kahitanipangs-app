@@ -36,6 +36,8 @@ export interface Transaction {
   account_id: string;
   category_id: string | null;
   scheduled_transaction_id: string | null;
+  loan_id: string | null;
+  debt_id: string | null;
   amount: number;
   type: TransactionType;
   description: string;

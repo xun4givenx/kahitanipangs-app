@@ -65,6 +65,10 @@ CREATE TABLE public.transactions (
   account_id UUID NOT NULL REFERENCES public.accounts(id) ON DELETE CASCADE,
   category_id UUID REFERENCES public.categories(id) ON DELETE SET NULL,
   scheduled_transaction_id UUID REFERENCES public.scheduled_transactions(id) ON DELETE SET NULL,
+  -- loan_id / debt_id reference tables created later below; FKs added via
+  -- ALTER TABLE after public.debts and public.loans exist (see below).
+  loan_id UUID,
+  debt_id UUID,
   amount NUMERIC(12, 2) NOT NULL CHECK (amount > 0),
   type TEXT NOT NULL CHECK (type IN ('income', 'expense', 'transfer')),
   description TEXT NOT NULL DEFAULT '',
@@ -150,12 +154,24 @@ CREATE TABLE public.loan_collections (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Link transactions to a loan (borrower collection) or a debt (debt payment).
+-- Added via ALTER TABLE (rather than inline in the transactions table above)
+-- because public.debts and public.loans are defined later in this script.
+ALTER TABLE public.transactions
+  ADD CONSTRAINT transactions_loan_id_fkey FOREIGN KEY (loan_id)
+    REFERENCES public.loans(id) ON DELETE SET NULL;
+ALTER TABLE public.transactions
+  ADD CONSTRAINT transactions_debt_id_fkey FOREIGN KEY (debt_id)
+    REFERENCES public.debts(id) ON DELETE SET NULL;
+
 -- Indexes
 CREATE INDEX idx_categories_user_id ON public.categories(user_id);
 CREATE INDEX idx_accounts_user_id ON public.accounts(user_id);
 CREATE INDEX idx_transactions_user_id ON public.transactions(user_id);
 CREATE INDEX idx_transactions_date ON public.transactions(date DESC);
 CREATE INDEX idx_transactions_account_id ON public.transactions(account_id);
+CREATE INDEX idx_transactions_loan_id ON public.transactions(loan_id);
+CREATE INDEX idx_transactions_debt_id ON public.transactions(debt_id);
 CREATE INDEX idx_scheduled_transactions_user_id ON public.scheduled_transactions(user_id);
 CREATE INDEX idx_scheduled_transactions_next ON public.scheduled_transactions(next_occurrence) WHERE is_active = true;
 CREATE INDEX idx_debts_user_id ON public.debts(user_id);

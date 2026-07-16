@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/utils/finance";
 import type { Loan, LoanCollection, LoanFrequency } from "@/types/database";
 import {
-  Plus, Pencil, Trash2, HandCoins, Coins, Undo2, History, PiggyBank,
+  Plus, Pencil, Trash2, HandCoins, Coins, Undo2, History, PiggyBank, Receipt,
 } from "lucide-react";
 
 const frequencyOptions: { value: LoanFrequency; label: string }[] = [
@@ -76,6 +76,9 @@ export default function LoansPage() {
   const [historyLoan, setHistoryLoan] = useState<Loan | null>(null);
   const [historyRows, setHistoryRows] = useState<LoanCollection[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [collectLoan, setCollectLoan] = useState<Loan | null>(null);
+  const [collectForm, setCollectForm] = useState({ amount: "", date: new Date().toISOString().split("T")[0] });
+  const [collectingManual, setCollectingManual] = useState(false);
 
   async function load() {
     const res = await fetch("/api/loans");
@@ -191,6 +194,47 @@ export default function LoansPage() {
     toast.success(
       `Collected ${formatCurrency(collection.collected_amount)} · ${formatCurrency(collection.savings_delta)} to savings`
     );
+  }
+
+  function openManualCollect(loan: Loan) {
+    setCollectLoan(loan);
+    setCollectForm({
+      amount: String(loan.repayment_amount || 0),
+      date: new Date().toISOString().split("T")[0],
+    });
+  }
+
+  async function handleManualCollect(e: React.FormEvent) {
+    e.preventDefault();
+    if (!collectLoan) return;
+    const amount = Number(collectForm.amount);
+    if (!amount || amount <= 0) {
+      toast.error("Enter a valid amount");
+      return;
+    }
+
+    setCollectingManual(true);
+    const res = await fetch(`/api/loans/${collectLoan.id}/collections`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        kind: "collection",
+        collected_amount: amount,
+        collection_date: collectForm.date,
+      }),
+    });
+    setCollectingManual(false);
+
+    if (!res.ok) {
+      toast.error("Failed to record collection");
+      return;
+    }
+    const { collection, loan: updatedLoan } = await res.json();
+    updateLoanRow(updatedLoan);
+    toast.success(
+      `Collected ${formatCurrency(collection.collected_amount)} · ${formatCurrency(collection.savings_delta)} to savings`
+    );
+    setCollectLoan(null);
   }
 
   function openRefund(loan: Loan) {
@@ -325,7 +369,7 @@ export default function LoansPage() {
                     />
                   </div>
                 </div>
-                <label className="flex items-start gap-3 rounded-lg border border-border bg-muted/30 p-3">
+                <label className="flex items-start gap-3 rounded-xl bg-muted/40 p-3 shadow-sm">
                   <input
                     type="checkbox"
                     checked={form.advanced_interest}
@@ -343,17 +387,17 @@ export default function LoansPage() {
                 </label>
 
                 <div className="grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-xl border border-border bg-muted/30 p-4 text-center">
+                  <div className="rounded-xl bg-muted/40 p-4 text-center shadow-sm">
                     <p className="text-[0.625rem] uppercase tracking-[0.2em] text-muted-foreground">Installment</p>
                     <p className="mt-2 text-lg font-semibold text-foreground">{formatCurrency(computedLoan.repaymentAmount)}</p>
                     <p className="mt-1 text-[0.7rem] text-muted-foreground">per payment</p>
                   </div>
-                  <div className="rounded-xl border border-border bg-muted/30 p-4 text-center">
+                  <div className="rounded-xl bg-muted/40 p-4 text-center shadow-sm">
                     <p className="text-[0.625rem] uppercase tracking-[0.2em] text-muted-foreground">Released amount</p>
                     <p className="mt-2 text-lg font-semibold text-foreground">{formatCurrency(computedLoan.amountReleased)}</p>
                     <p className="mt-1 text-[0.7rem] text-muted-foreground">cash to borrower</p>
                   </div>
-                  <div className="rounded-xl border border-border bg-muted/30 p-4 text-center">
+                  <div className="rounded-xl bg-muted/40 p-4 text-center shadow-sm">
                     <p className="text-[0.625rem] uppercase tracking-[0.2em] text-muted-foreground">Total due</p>
                     <p className="mt-2 text-lg font-semibold text-foreground">{formatCurrency(computedLoan.remainingBalance)}</p>
                     <p className="mt-1 text-[0.7rem] text-muted-foreground">principal + interest</p>
@@ -429,6 +473,14 @@ export default function LoansPage() {
                               <Coins className="mr-1 h-3.5 w-3.5" />
                               Collect
                             </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openManualCollect(loan)}
+                              title="Record collection (custom amount/date)"
+                            >
+                              <Receipt className="h-4 w-4" />
+                            </Button>
                             {Number(loan.savings_balance || 0) > 0 && (
                               <Button
                                 variant="ghost"
@@ -495,6 +547,49 @@ export default function LoansPage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={!!collectLoan} onOpenChange={(v) => { if (!v) setCollectLoan(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Record collection{collectLoan ? ` · ${collectLoan.person_name}` : ""}</DialogTitle>
+          </DialogHeader>
+          {collectLoan && (
+            <form onSubmit={handleManualCollect} className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Log a custom collection amount and date for {collectLoan.person_name}.
+              </p>
+              <div className="space-y-2">
+                <Label>Amount collected</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={collectForm.amount}
+                  onChange={(e) => setCollectForm({ ...collectForm, amount: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Collection date</Label>
+                <Input
+                  type="date"
+                  value={collectForm.date}
+                  onChange={(e) => setCollectForm({ ...collectForm, date: e.target.value })}
+                  required
+                />
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setCollectLoan(null)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={collectingManual}>
+                  {collectingManual ? "Recording..." : "Record collection"}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={!!historyLoan} onOpenChange={(v) => { if (!v) { setHistoryLoan(null); setHistoryRows([]); } }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -509,7 +604,7 @@ export default function LoansPage() {
               {historyRows.map((row) => (
                 <div
                   key={row.id}
-                  className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm"
+                  className="flex items-center justify-between rounded-xl bg-muted/40 px-3 py-2 text-sm shadow-sm"
                 >
                   <div>
                     <p className="font-medium capitalize">{row.kind}</p>

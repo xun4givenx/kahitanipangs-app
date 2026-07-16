@@ -121,7 +121,7 @@ export default function CategoriesPage() {
                   {section.items.map((c) => (
                     <div
                       key={c.id}
-                      className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-accent/40"
+                      className="flex items-center justify-between rounded-xl bg-muted/40 p-3 transition-colors hover:bg-accent/40"
                     >
                       <div className="flex items-center gap-3">
                         <div className="h-4 w-4 rounded-full" style={{ backgroundColor: c.color }} />

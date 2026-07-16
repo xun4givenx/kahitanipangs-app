@@ -12,6 +12,9 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -76,6 +79,10 @@ export default function DebtsPage() {
 
   async function handlePayment(e: React.FormEvent) {
     e.preventDefault();
+    if (!paymentForm.debt_id) {
+      toast.error("Select a debt");
+      return;
+    }
     const res = await fetch("/api/debt-payments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -143,15 +150,17 @@ export default function DebtsPage() {
                 <form onSubmit={handlePayment} className="space-y-4">
                   <div className="space-y-2">
                     <Label>Debt</Label>
-                    <select
-                      className="flex h-10 w-full rounded-md border bg-background px-3 text-sm"
+                    <Select
                       value={paymentForm.debt_id}
-                      onChange={(e) => setPaymentForm({ ...paymentForm, debt_id: e.target.value })}
-                      required
+                      onValueChange={(v) => setPaymentForm({ ...paymentForm, debt_id: v })}
                     >
-                      <option value="">Select debt</option>
-                      {debts.map((d) => <option key={d.id} value={d.id}>{d.name} ({formatCurrency(d.balance)})</option>)}
-                    </select>
+                      <SelectTrigger className="w-full"><SelectValue placeholder="Select debt" /></SelectTrigger>
+                      <SelectContent>
+                        {debts.map((d) => (
+                          <SelectItem key={d.id} value={d.id}>{d.name} ({formatCurrency(d.balance)})</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label>Amount</Label>
@@ -174,14 +183,16 @@ export default function DebtsPage() {
                 <form onSubmit={handleGeneratePlan} className="space-y-4">
                   <div className="space-y-2">
                     <Label>Strategy</Label>
-                    <select
-                      className="flex h-10 w-full rounded-md border bg-background px-3 text-sm"
+                    <Select
                       value={planForm.strategy}
-                      onChange={(e) => setPlanForm({ ...planForm, strategy: e.target.value })}
+                      onValueChange={(v) => setPlanForm({ ...planForm, strategy: v })}
                     >
-                      <option value="avalanche">Avalanche (highest interest first)</option>
-                      <option value="snowball">Snowball (smallest balance first)</option>
-                    </select>
+                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="avalanche">Avalanche (highest interest first)</SelectItem>
+                        <SelectItem value="snowball">Snowball (smallest balance first)</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label>Monthly Budget</Label>

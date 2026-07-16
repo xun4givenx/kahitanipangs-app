@@ -20,20 +20,26 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { formatCurrency, formatDate, FREQUENCIES } from "@/lib/utils/finance";
-import type { Transaction, Account, Category, ScheduledTransaction } from "@/types/database";
+import type { Transaction, Account, Category, ScheduledTransaction, Loan, Debt } from "@/types/database";
 import { Plus, Copy, Trash2, Pencil, Repeat, Receipt } from "lucide-react";
+
+type LinkType = "none" | "loan" | "debt";
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [scheduled, setScheduled] = useState<ScheduledTransaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [loans, setLoans] = useState<Loan[]>([]);
+  const [debts, setDebts] = useState<Debt[]>([]);
   const [open, setOpen] = useState(false);
   const [recurringOpen, setRecurringOpen] = useState(false);
   const [editing, setEditing] = useState<Transaction | null>(null);
+  const [linkType, setLinkType] = useState<LinkType>("none");
   const [form, setForm] = useState({
     account_id: "", category_id: "", amount: "", type: "expense",
     description: "", notes: "", date: new Date().toISOString().split("T")[0],
+    loan_id: "", debt_id: "",
   });
   const [recurringForm, setRecurringForm] = useState({
     account_id: "", category_id: "", amount: "", type: "expense",
@@ -42,16 +48,20 @@ export default function TransactionsPage() {
   });
 
   async function load() {
-    const [txRes, accRes, catRes, schRes] = await Promise.all([
+    const [txRes, accRes, catRes, schRes, loanRes, debtRes] = await Promise.all([
       fetch("/api/transactions").then((r) => r.json()),
       fetch("/api/accounts").then((r) => r.json()),
       fetch("/api/categories").then((r) => r.json()),
       fetch("/api/scheduled-transactions").then((r) => r.json()),
+      fetch("/api/loans").then((r) => r.json()),
+      fetch("/api/debts").then((r) => r.json()),
     ]);
     setTransactions(txRes);
     setAccounts(accRes);
     setCategories(catRes);
     setScheduled(schRes);
+    setLoans(Array.isArray(loanRes) ? loanRes : []);
+    setDebts(Array.isArray(debtRes) ? debtRes : []);
   }
 
   useEffect(() => { load(); }, []);
@@ -64,7 +74,13 @@ export default function TransactionsPage() {
     const res = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, amount: parseFloat(form.amount), category_id: form.category_id || null }),
+      body: JSON.stringify({
+        ...form,
+        amount: parseFloat(form.amount),
+        category_id: form.category_id || null,
+        loan_id: linkType === "loan" && form.loan_id ? form.loan_id : null,
+        debt_id: linkType === "debt" && form.debt_id ? form.debt_id : null,
+      }),
     });
 
     if (!res.ok) { toast.error("Failed to save transaction"); return; }
@@ -97,7 +113,9 @@ export default function TransactionsPage() {
     setForm({
       account_id: "", category_id: "", amount: "", type: "expense",
       description: "", notes: "", date: new Date().toISOString().split("T")[0],
+      loan_id: "", debt_id: "",
     });
+    setLinkType("none");
   }
 
   async function handleDuplicate(id: string) {
@@ -124,7 +142,10 @@ export default function TransactionsPage() {
       description: tx.description,
       notes: tx.notes || "",
       date: tx.date,
+      loan_id: tx.loan_id || "",
+      debt_id: tx.debt_id || "",
     });
+    setLinkType(tx.loan_id ? "loan" : tx.debt_id ? "debt" : "none");
     setOpen(true);
   }
 
@@ -206,7 +227,13 @@ export default function TransactionsPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Type</Label>
-                      <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v, category_id: "" })}>
+                      <Select
+                        value={form.type}
+                        onValueChange={(v) => {
+                          setForm({ ...form, type: v, category_id: "", loan_id: "", debt_id: "" });
+                          setLinkType("none");
+                        }}
+                      >
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="income">Income</SelectItem>
@@ -237,6 +264,50 @@ export default function TransactionsPage() {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="space-y-2">
+                    <Label>Apply to</Label>
+                    <Select
+                      value={linkType}
+                      onValueChange={(v) => {
+                        const val = v as LinkType;
+                        setLinkType(val);
+                        setForm({
+                          ...form,
+                          loan_id: val === "loan" ? form.loan_id : "",
+                          debt_id: val === "debt" ? form.debt_id : "",
+                        });
+                      }}
+                    >
+                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {form.type === "income" && <SelectItem value="loan">Loan (borrower)</SelectItem>}
+                        {form.type === "expense" && <SelectItem value="debt">Debt</SelectItem>}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {linkType === "loan" && (
+                    <div className="space-y-2">
+                      <Label>Borrower</Label>
+                      <Select value={form.loan_id} onValueChange={(v) => setForm({ ...form, loan_id: v })}>
+                        <SelectTrigger className="w-full"><SelectValue placeholder="Select borrower" /></SelectTrigger>
+                        <SelectContent>
+                          {loans.map((l) => <SelectItem key={l.id} value={l.id}>{l.person_name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  {linkType === "debt" && (
+                    <div className="space-y-2">
+                      <Label>Debt</Label>
+                      <Select value={form.debt_id} onValueChange={(v) => setForm({ ...form, debt_id: v })}>
+                        <SelectTrigger className="w-full"><SelectValue placeholder="Select debt" /></SelectTrigger>
+                        <SelectContent>
+                          {debts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label>Date</Label>
                     <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />

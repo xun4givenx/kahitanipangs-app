@@ -1,4 +1,5 @@
 import { getAuthUser, jsonError, jsonOk } from "@/lib/api-helpers";
+import { applyDebtPayment } from "@/lib/server/ledger";
 
 export async function GET(request: Request) {
   const auth = await getAuthUser();
@@ -28,18 +29,12 @@ export async function POST(request: Request) {
 
   if (!debt_id || !amount) return jsonError("Debt and amount are required");
 
-  const { data, error } = await auth.supabase
-    .from("debt_payments")
-    .insert({
-      user_id: auth.user.id,
-      debt_id,
-      amount,
-      payment_date: payment_date || new Date().toISOString().split("T")[0],
-      notes,
-    })
-    .select("*, debts(name)")
-    .single();
+  const result = await applyDebtPayment(auth.supabase, auth.user.id, debt_id, {
+    amount: Number(amount),
+    paymentDate: payment_date,
+    notes,
+  });
 
-  if (error) return jsonError(error.message, 500);
-  return jsonOk(data, 201);
+  if (!result.ok) return jsonError(result.error, result.status ?? 500);
+  return jsonOk(result.data, 201);
 }

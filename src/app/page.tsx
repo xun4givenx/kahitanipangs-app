@@ -374,7 +374,7 @@ export default function DashboardPage() {
               {data?.upcomingPayments?.length ? (
                 <div className="space-y-3">
                   {data.upcomingPayments.map((p) => (
-                    <div key={p.id} className="flex items-center justify-between rounded-lg border p-3">
+                    <div key={p.id} className="flex items-center justify-between rounded-xl bg-muted/40 p-3">
                       <div>
                         <p className="font-medium">{p.description}</p>
                         <p className="text-sm text-muted-foreground">
@@ -410,8 +410,8 @@ export default function DashboardPage() {
                 {data.accounts.map((a) => (
                   <div
                     key={a.id}
-                    className="flex items-center justify-between rounded-lg border p-4"
-                    style={{ borderLeftColor: a.color, borderLeftWidth: 4 }}
+                    className="flex items-center justify-between rounded-xl border-l-4 bg-muted/40 p-4"
+                    style={{ borderLeftColor: a.color }}
                   >
                     <div>
                       <p className="font-medium">{a.name}</p>

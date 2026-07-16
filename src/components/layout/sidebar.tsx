@@ -38,8 +38,8 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="flex h-screen w-64 flex-col border-r bg-card">
-      <div className="flex h-16 items-center border-b px-6">
+    <aside className="flex h-screen w-64 flex-col bg-card shadow-sm">
+      <div className="flex h-16 items-center border-b border-border/40 px-6">
         <Link href="/" className="text-xl font-bold tracking-tight">
           Money Manager
         </Link>
@@ -65,7 +65,7 @@ export function Sidebar() {
           );
         })}
       </nav>
-      <div className="flex items-center justify-between gap-2 border-t p-4">
+      <div className="flex items-center justify-between gap-2 border-t border-border/40 p-4">
         <Button
           variant="ghost"
           className="flex-1 justify-start gap-3"
