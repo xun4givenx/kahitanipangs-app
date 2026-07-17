@@ -9,6 +9,8 @@ import {
   Tags,
   CreditCard,
   HandCoins,
+  BookOpen,
+  Scale,
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,6 +26,9 @@ const navItems = [
   { href: "/categories", label: "Categories", icon: Tags },
   { href: "/debts", label: "Debts", icon: CreditCard },
   { href: "/loans", label: "Loans", icon: HandCoins },
+  { href: "/ledger", label: "Ledger", icon: BookOpen },
+  { href: "/ledger/accounts", label: "Chart of Accounts", icon: Wallet },
+  { href: "/ledger/trial-balance", label: "Trial Balance", icon: Scale },
 ];
 
 export function Sidebar() {
