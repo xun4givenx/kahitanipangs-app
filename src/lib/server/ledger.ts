@@ -1,6 +1,45 @@
 import type { createClient } from "@/lib/supabase/server";
 import { roundUpToTens } from "@/lib/utils/finance";
-import type { Debt, DebtPayment, Loan, LoanCollection } from "@/types/database";
+import type { Debt, DebtPayment, Loan, LoanCollection, LoanCollectionKind } from "@/types/database";
+
+const clamp0 = (n: number) => Math.max(0, n);
+
+/**
+ * Pure math for how a loan's app-managed balances change when a collection row
+ * is edited or deleted. Kept side-effect-free so it can be unit-tested without
+ * Supabase. (The linked transaction's effect on the *account* balance is handled
+ * separately by the `transactions_balance_trigger`; this only covers the loan's
+ * `remaining_balance` / `savings_balance`, which are updated in application code.)
+ *
+ * - Edit: `installment_amount` is loan-derived and never changes, so
+ *   `remaining_balance` is untouched; only savings moves by the swing in
+ *   `savings_delta`.
+ * - Delete collection: restore the deducted installment to `remaining_balance`
+ *   (capped at `total_amount`) and remove the row's `savings_delta`.
+ * - Delete withdrawal: restore the withdrawn amount to savings (its
+ *   `savings_delta` is negative); `remaining_balance` untouched.
+ */
+export function collectionBalanceEffects(
+  loan: { remaining_balance: number; savings_balance: number; total_amount: number },
+  existing: { kind: LoanCollectionKind; installment_amount: number; savings_delta: number },
+  op: { action: "edit"; newSavingsDelta: number } | { action: "delete" }
+): { remaining_balance: number; savings_balance: number } {
+  if (op.action === "edit") {
+    return {
+      remaining_balance: loan.remaining_balance,
+      savings_balance: clamp0(loan.savings_balance + (op.newSavingsDelta - existing.savings_delta)),
+    };
+  }
+  // delete: reverse this row's effects
+  const remaining_balance =
+    existing.kind === "collection"
+      ? Math.min(loan.total_amount, loan.remaining_balance + existing.installment_amount)
+      : loan.remaining_balance;
+  return {
+    remaining_balance,
+    savings_balance: clamp0(loan.savings_balance - existing.savings_delta),
+  };
+}
 
 type SupabaseClient = ReturnType<typeof createClient>;
 
@@ -176,6 +215,173 @@ export async function applyLoanWithdrawal(
   if (updateError) return { ok: false, error: updateError.message };
 
   return { ok: true, data: { collection, loan: updatedLoan } };
+}
+
+interface EditLoanCollectionParams {
+  collectionDate?: string | null;
+  collectedAmount?: number | null;
+  note?: string | null;
+}
+
+/**
+ * Edits an existing loan collection (or withdrawal) and keeps the linked
+ * transaction + the loan's app-managed balances consistent.
+ *
+ * - collection: date, collected amount, and note are editable. Changing the
+ *   collected amount re-derives `savings_delta` and adjusts `savings_balance`
+ *   (installment is loan-derived, so `remaining_balance` is untouched).
+ * - withdrawal: amount (passed as `collectedAmount`) and note are editable;
+ *   `savings_delta` becomes `-amount` and savings is adjusted by the swing.
+ *
+ * The linked transaction (found via `collection_id`) has its amount/date updated
+ * so the `transactions_balance_trigger` fixes the account balance. Old rows with
+ * no linked transaction (pre-migration) skip that step gracefully.
+ */
+export async function editLoanCollection(
+  supabase: SupabaseClient,
+  userId: string,
+  loanId: string,
+  collectionId: string,
+  { collectionDate, collectedAmount, note }: EditLoanCollectionParams = {}
+): Promise<LedgerResult<{ collection: LoanCollection; loan: Loan }>> {
+  const { data: existing, error: existingError } = await supabase
+    .from("loan_collections")
+    .select("*")
+    .eq("id", collectionId)
+    .eq("user_id", userId)
+    .eq("loan_id", loanId)
+    .single();
+
+  if (existingError || !existing) return { ok: false, error: "Collection not found", status: 404 };
+
+  const { data: loan, error: loanError } = await supabase
+    .from("loans")
+    .select("*")
+    .eq("id", loanId)
+    .single();
+
+  if (loanError || !loan) return { ok: false, error: "Loan not found", status: 404 };
+
+  const isCollection = existing.kind === "collection";
+
+  // Derive the new amount + savings_delta for whichever kind this is.
+  const newAmount =
+    collectedAmount !== undefined && collectedAmount !== null
+      ? Number(collectedAmount)
+      : isCollection
+        ? Number(existing.collected_amount)
+        : -Number(existing.savings_delta); // withdrawal amount is stored as -savings_delta
+
+  const newSavingsDelta = isCollection
+    ? newAmount - Number(existing.installment_amount)
+    : -newAmount;
+
+  const { savings_balance } = collectionBalanceEffects(loan, existing, {
+    action: "edit",
+    newSavingsDelta,
+  });
+
+  // Update the collection row.
+  const collectionUpdate: Record<string, unknown> = {
+    savings_delta: newSavingsDelta,
+    note: note !== undefined ? note : existing.note,
+  };
+  if (isCollection) {
+    collectionUpdate.collected_amount = newAmount;
+    if (collectionDate) collectionUpdate.collection_date = collectionDate;
+  }
+
+  const { data: collection, error: updateCollectionError } = await supabase
+    .from("loan_collections")
+    .update(collectionUpdate)
+    .eq("id", collectionId)
+    .select()
+    .single();
+
+  if (updateCollectionError) return { ok: false, error: updateCollectionError.message };
+
+  // Update the loan's savings balance (remaining is unchanged on edit).
+  const { data: updatedLoan, error: loanUpdateError } = await supabase
+    .from("loans")
+    .update({ savings_balance })
+    .eq("id", loanId)
+    .select()
+    .single();
+
+  if (loanUpdateError) return { ok: false, error: loanUpdateError.message };
+
+  // Update the linked transaction (amount + date) if one exists.
+  const txUpdate: Record<string, unknown> = { amount: newAmount };
+  if (isCollection && collectionDate) txUpdate.date = collectionDate;
+
+  const { error: txError } = await supabase
+    .from("transactions")
+    .update(txUpdate)
+    .eq("collection_id", collectionId);
+
+  if (txError) return { ok: false, error: txError.message };
+
+  return { ok: true, data: { collection, loan: updatedLoan } };
+}
+
+/**
+ * Deletes a loan collection (or withdrawal): removes the linked transaction
+ * first (so the account-balance trigger reverses cleanly), reverses the loan's
+ * app-managed `remaining_balance` / `savings_balance`, then deletes the row.
+ */
+export async function deleteLoanCollection(
+  supabase: SupabaseClient,
+  userId: string,
+  loanId: string,
+  collectionId: string
+): Promise<LedgerResult<{ loan: Loan }>> {
+  const { data: existing, error: existingError } = await supabase
+    .from("loan_collections")
+    .select("*")
+    .eq("id", collectionId)
+    .eq("user_id", userId)
+    .eq("loan_id", loanId)
+    .single();
+
+  if (existingError || !existing) return { ok: false, error: "Collection not found", status: 404 };
+
+  const { data: loan, error: loanError } = await supabase
+    .from("loans")
+    .select("*")
+    .eq("id", loanId)
+    .single();
+
+  if (loanError || !loan) return { ok: false, error: "Loan not found", status: 404 };
+
+  // Delete the linked transaction first — the trigger reverses the account balance.
+  const { error: txError } = await supabase
+    .from("transactions")
+    .delete()
+    .eq("collection_id", collectionId);
+
+  if (txError) return { ok: false, error: txError.message };
+
+  const { remaining_balance, savings_balance } = collectionBalanceEffects(loan, existing, {
+    action: "delete",
+  });
+
+  const { data: updatedLoan, error: loanUpdateError } = await supabase
+    .from("loans")
+    .update({ remaining_balance, savings_balance })
+    .eq("id", loanId)
+    .select()
+    .single();
+
+  if (loanUpdateError) return { ok: false, error: loanUpdateError.message };
+
+  const { error: deleteError } = await supabase
+    .from("loan_collections")
+    .delete()
+    .eq("id", collectionId);
+
+  if (deleteError) return { ok: false, error: deleteError.message };
+
+  return { ok: true, data: { loan: updatedLoan } };
 }
 
 /**

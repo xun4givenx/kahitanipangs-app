@@ -52,6 +52,7 @@ export async function POST(
       description: "Loan collection – " + loan.person_name,
       date: collection.collection_date,
       loan_id: params.id,
+      collection_id: collection.id,
     });
 
     if (txError) return jsonError(txError.message, 500);
@@ -67,7 +68,7 @@ export async function POST(
 
   if (!result.ok) return jsonError(result.error, result.status ?? 500);
 
-  const { loan } = result.data;
+  const { collection, loan } = result.data;
   const cashAccountId = await ensureCashCollectionsAccount(auth.supabase, auth.user.id);
 
   const { error: txError } = await auth.supabase.from("transactions").insert({
@@ -78,6 +79,7 @@ export async function POST(
     description: "Savings refund – " + loan.person_name,
     date: new Date().toISOString().split("T")[0],
     loan_id: params.id,
+    collection_id: collection.id,
   });
 
   if (txError) return jsonError(txError.message, 500);

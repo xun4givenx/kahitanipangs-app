@@ -38,6 +38,7 @@ export interface Transaction {
   scheduled_transaction_id: string | null;
   loan_id: string | null;
   debt_id: string | null;
+  collection_id: string | null;
   amount: number;
   type: TransactionType;
   description: string;
@@ -145,6 +146,7 @@ export interface LoanCollection {
   savings_delta: number;
   note: string | null;
   created_at: string;
+  updated_at?: string;
 }
 
 export interface DashboardStats {

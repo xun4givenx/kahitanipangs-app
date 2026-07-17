@@ -81,6 +81,9 @@ export default function LoansPage() {
   const [collectForm, setCollectForm] = useState({ amount: "", date: new Date().toISOString().split("T")[0] });
   const [collectingManual, setCollectingManual] = useState(false);
   const [cashAccount, setCashAccount] = useState<Account | null>(null);
+  const [editCollection, setEditCollection] = useState<LoanCollection | null>(null);
+  const [editCollectionForm, setEditCollectionForm] = useState({ amount: "", date: "", note: "" });
+  const [editingCollection, setEditingCollection] = useState(false);
 
   async function load() {
     const res = await fetch("/api/loans");
@@ -304,6 +307,60 @@ export default function LoansPage() {
       return;
     }
     setHistoryRows(await res.json());
+  }
+
+  async function refreshHistory(loanId: string) {
+    const res = await fetch(`/api/loans/${loanId}/collections`);
+    if (res.ok) setHistoryRows(await res.json());
+  }
+
+  function openEditCollection(row: LoanCollection) {
+    setEditCollection(row);
+    setEditCollectionForm({
+      amount: row.kind === "collection" ? String(row.collected_amount) : String(-row.savings_delta),
+      date: row.collection_date,
+      note: row.note || "",
+    });
+  }
+
+  async function saveEditCollection(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editCollection || !historyLoan) return;
+    setEditingCollection(true);
+    const body: Record<string, unknown> = {
+      collected_amount: Number(editCollectionForm.amount),
+      note: editCollectionForm.note,
+    };
+    if (editCollection.kind === "collection") body.collection_date = editCollectionForm.date;
+    const res = await fetch(`/api/loans/${historyLoan.id}/collections/${editCollection.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    setEditingCollection(false);
+    if (!res.ok) {
+      toast.error("Failed to update collection");
+      return;
+    }
+    toast.success("Collection updated");
+    setEditCollection(null);
+    await refreshHistory(historyLoan.id);
+    load();
+    loadCashAccount();
+  }
+
+  async function handleCollectionDelete(row: LoanCollection) {
+    if (!historyLoan) return;
+    if (!confirm(`Delete this ${row.kind}? This also removes its linked transaction and restores balances.`)) return;
+    const res = await fetch(`/api/loans/${historyLoan.id}/collections/${row.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      toast.error("Failed to delete collection");
+      return;
+    }
+    toast.success("Collection deleted");
+    await refreshHistory(historyLoan.id);
+    load();
+    loadCashAccount();
   }
 
   return (
@@ -681,18 +738,83 @@ export default function LoansPage() {
                     <p className="font-medium capitalize">{row.kind}</p>
                     <p className="text-xs text-muted-foreground">{formatDate(row.collection_date)}</p>
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium">
-                      {row.kind === "collection" ? formatCurrency(row.collected_amount) : `-${formatCurrency(-row.savings_delta)}`}
-                    </p>
-                    {row.kind === "collection" && (
-                      <p className="text-xs text-chart-2">+{formatCurrency(row.savings_delta)} savings</p>
-                    )}
+                  <div className="flex items-center gap-1">
+                    <div className="text-right">
+                      <p className="font-medium">
+                        {row.kind === "collection" ? formatCurrency(row.collected_amount) : `-${formatCurrency(-row.savings_delta)}`}
+                      </p>
+                      {row.kind === "collection" && (
+                        <p className="text-xs text-chart-2">+{formatCurrency(row.savings_delta)} savings</p>
+                      )}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => openEditCollection(row)}
+                      title="Edit"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive"
+                      onClick={() => handleCollectionDelete(row)}
+                      title="Delete"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               ))}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editCollection} onOpenChange={(v) => { if (!v) setEditCollection(null); }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="capitalize">
+              Edit {editCollection?.kind}{historyLoan ? ` · ${historyLoan.person_name}` : ""}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={saveEditCollection} className="space-y-4">
+            <div className="space-y-2">
+              <Label>{editCollection?.kind === "collection" ? "Collected amount" : "Withdrawal amount"}</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={editCollectionForm.amount}
+                onChange={(e) => setEditCollectionForm((f) => ({ ...f, amount: e.target.value }))}
+                required
+              />
+            </div>
+            {editCollection?.kind === "collection" && (
+              <div className="space-y-2">
+                <Label>Collection date</Label>
+                <Input
+                  type="date"
+                  value={editCollectionForm.date}
+                  onChange={(e) => setEditCollectionForm((f) => ({ ...f, date: e.target.value }))}
+                />
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>Note</Label>
+              <Input
+                value={editCollectionForm.note}
+                onChange={(e) => setEditCollectionForm((f) => ({ ...f, note: e.target.value }))}
+                placeholder="Optional"
+              />
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={editingCollection}>
+                {editingCollection ? "Saving..." : "Save changes"}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </AppShell>
