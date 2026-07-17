@@ -476,3 +476,97 @@ export async function deleteJournalEntry(
   if (error) return { ok: false, error: error.message };
   return { ok: true, data: { success: true } };
 }
+
+// ---- Reporting: trial balance + account register ----
+
+export async function getTrialBalance(
+  supabase: SupabaseClient,
+  opts?: { book?: Book; asOf?: string }
+): Promise<LedgerResult<TrialBalance>> {
+  const { data: accounts, error: accErr } = await supabase
+    .from("ledger_accounts")
+    .select("id, code, name, type, book, normal_balance");
+  if (accErr) return { ok: false, error: accErr.message };
+
+  let lineQuery = supabase
+    .from("journal_lines")
+    .select("ledger_account_id, debit, credit, journal_entries!inner(entry_date, status)")
+    .eq("journal_entries.status", "posted");
+  if (opts?.asOf) {
+    lineQuery = lineQuery.lte("journal_entries.entry_date", opts.asOf);
+  }
+  const { data: lines, error: lineErr } = await lineQuery;
+  if (lineErr) return { ok: false, error: lineErr.message };
+
+  const tb = buildTrialBalance(
+    (accounts ?? []) as never,
+    ((lines ?? []) as { ledger_account_id: string; debit: number; credit: number }[]),
+    opts?.book
+  );
+  return { ok: true, data: tb };
+}
+
+export interface RegisterRow {
+  line_id: string;
+  entry_id: string;
+  entry_date: string;
+  memo: string | null;
+  debit: number;
+  credit: number;
+  running_balance: number;
+}
+
+export async function getAccountRegister(
+  supabase: SupabaseClient,
+  accountId: string
+): Promise<LedgerResult<{ account: LedgerAccount; rows: RegisterRow[] }>> {
+  const { data: account, error: accErr } = await supabase
+    .from("ledger_accounts")
+    .select("*")
+    .eq("id", accountId)
+    .single();
+  if (accErr || !account) {
+    return { ok: false, error: accErr?.message ?? "Account not found", status: 404 };
+  }
+
+  const { data: lines, error: lineErr } = await supabase
+    .from("journal_lines")
+    .select("id, debit, credit, journal_entry_id, journal_entries!inner(entry_date, memo, status)")
+    .eq("ledger_account_id", accountId)
+    .eq("journal_entries.status", "posted");
+  if (lineErr) return { ok: false, error: lineErr.message };
+
+  type Row = {
+    id: string;
+    debit: number;
+    credit: number;
+    journal_entry_id: string;
+    journal_entries: { entry_date: string; memo: string | null };
+  };
+  const sorted = ((lines ?? []) as unknown as Row[]).sort((a, b) =>
+    a.journal_entries.entry_date.localeCompare(b.journal_entries.entry_date)
+  );
+
+  const acct = account as LedgerAccount;
+  const rows: RegisterRow[] = sorted.map((l) => ({
+    line_id: l.id,
+    entry_id: l.journal_entry_id,
+    entry_date: l.journal_entries.entry_date,
+    memo: l.journal_entries.memo,
+    debit: Number(l.debit || 0),
+    credit: Number(l.credit || 0),
+    running_balance: 0,
+  }));
+
+  // Running balance accumulates by the account's normal side.
+  let bal = 0;
+  for (const r of rows) {
+    bal =
+      acct.normal_balance === "debit"
+        ? roundMoney(bal + r.debit - r.credit)
+        : roundMoney(bal + r.credit - r.debit);
+    r.running_balance = bal;
+  }
+
+  return { ok: true, data: { account: acct, rows } };
+}
