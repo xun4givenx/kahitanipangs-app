@@ -9,6 +9,7 @@ export async function GET(
   if (!auth) return jsonError("Unauthorized", 401);
 
   const result = await getAccountRegister(auth.supabase, params.id);
-  if (!result.ok) return jsonError(result.error, result.status ?? 404);
+  // Account-not-found sets status:404 explicitly; any other (e.g. line-query) failure is a 500.
+  if (!result.ok) return jsonError(result.error, result.status ?? 500);
   return jsonOk(result.data);
 }
