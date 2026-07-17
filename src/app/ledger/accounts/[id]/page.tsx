@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { AppShell } from "@/components/layout/app-shell";
 import { Card } from "@/components/ui/card";
 import {
   Table,
@@ -42,52 +43,54 @@ export default function AccountRegisterPage() {
     })();
   }, [id]);
 
-  if (loading) return <p className="text-sm text-muted-foreground">Loading…</p>;
-  if (!account) return <p className="text-sm text-muted-foreground">Account not found.</p>;
+  if (loading) return <AppShell><p className="text-sm text-muted-foreground">Loading…</p></AppShell>;
+  if (!account) return <AppShell><p className="text-sm text-muted-foreground">Account not found.</p></AppShell>;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          <span className="font-mono text-base text-muted-foreground">{account.code}</span> {account.name}
-        </h1>
-        <p className="text-sm text-muted-foreground capitalize">
-          {account.type} · {account.book} · {account.normal_balance}-normal
-        </p>
-      </div>
+    <AppShell>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">
+            <span className="font-mono text-base text-muted-foreground">{account.code}</span> {account.name}
+          </h1>
+          <p className="text-sm text-muted-foreground capitalize">
+            {account.type} · {account.book} · {account.normal_balance}-normal
+          </p>
+        </div>
 
-      <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Memo</TableHead>
-              <TableHead className="text-right">Debit</TableHead>
-              <TableHead className="text-right">Credit</TableHead>
-              <TableHead className="text-right">Balance</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.length === 0 ? (
+        <Card>
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
-                  No posted lines yet.
-                </TableCell>
+                <TableHead>Date</TableHead>
+                <TableHead>Memo</TableHead>
+                <TableHead className="text-right">Debit</TableHead>
+                <TableHead className="text-right">Credit</TableHead>
+                <TableHead className="text-right">Balance</TableHead>
               </TableRow>
-            ) : (
-              rows.map((r) => (
-                <TableRow key={r.line_id}>
-                  <TableCell>{formatDate(r.entry_date)}</TableCell>
-                  <TableCell>{r.memo ?? "—"}</TableCell>
-                  <TableCell className="text-right">{r.debit ? formatCurrency(r.debit) : "—"}</TableCell>
-                  <TableCell className="text-right">{r.credit ? formatCurrency(r.credit) : "—"}</TableCell>
-                  <TableCell className="text-right font-medium">{formatCurrency(r.running_balance)}</TableCell>
+            </TableHeader>
+            <TableBody>
+              {rows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
+                    No posted lines yet.
+                  </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </Card>
-    </div>
+              ) : (
+                rows.map((r) => (
+                  <TableRow key={r.line_id}>
+                    <TableCell>{formatDate(r.entry_date)}</TableCell>
+                    <TableCell>{r.memo ?? "—"}</TableCell>
+                    <TableCell className="text-right">{r.debit ? formatCurrency(r.debit) : "—"}</TableCell>
+                    <TableCell className="text-right">{r.credit ? formatCurrency(r.credit) : "—"}</TableCell>
+                    <TableCell className="text-right font-medium">{formatCurrency(r.running_balance)}</TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </Card>
+      </div>
+    </AppShell>
   );
 }

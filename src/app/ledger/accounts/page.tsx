@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -92,7 +93,8 @@ export default function ChartOfAccountsPage() {
   }));
 
   return (
-    <div className="space-y-6">
+    <AppShell>
+      <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Chart of Accounts</h1>
@@ -213,6 +215,7 @@ export default function ChartOfAccountsPage() {
           )}
         </div>
       )}
-    </div>
+      </div>
+    </AppShell>
   );
 }
