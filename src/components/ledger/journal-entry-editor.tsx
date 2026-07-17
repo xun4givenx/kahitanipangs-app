@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatCurrency } from "@/lib/utils/finance";
-import { sumDebits, sumCredits, isBalanced, type JournalLineInput } from "@/lib/server/ledger-gl";
+import { sumDebits, sumCredits, isBalanced, type JournalLineInput } from "@/lib/ledger-math";
 import type { LedgerAccount, JournalEntryWithLines } from "@/types/database";
 
 interface EditorLine {
