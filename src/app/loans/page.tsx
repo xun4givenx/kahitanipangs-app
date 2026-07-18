@@ -363,6 +363,40 @@ export default function LoansPage() {
     loadCashAccount();
   }
 
+  function loanActions(loan: (typeof loans)[number]) {
+    return (
+      <div className="flex items-center justify-end gap-1">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={collectingId === loan.id}
+          onClick={() => handleCollect(loan)}
+          title="Record today's collection"
+        >
+          <Coins className="mr-1 h-3.5 w-3.5" />
+          Collect
+        </Button>
+        <Button variant="ghost" size="icon" onClick={() => openManualCollect(loan)} title="Record collection (custom amount/date)">
+          <Receipt className="h-4 w-4" />
+        </Button>
+        {Number(loan.savings_balance || 0) > 0 && (
+          <Button variant="ghost" size="icon" onClick={() => openRefund(loan)} title="Refund savings">
+            <Undo2 className="h-4 w-4" />
+          </Button>
+        )}
+        <Button variant="ghost" size="icon" onClick={() => openHistory(loan)} title="Collection history">
+          <History className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={() => handleEdit(loan)} title="Edit loan">
+          <Pencil className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={() => handleDelete(loan.id)} title="Delete loan">
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <AppShell>
       <div className="space-y-6">
@@ -536,7 +570,7 @@ export default function LoansPage() {
               <CardDescription>{loans.length} loan{loans.length === 1 ? "" : "s"} outstanding</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="w-full overflow-x-auto">
+              <div className="hidden w-full overflow-x-auto md:block">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -590,45 +624,7 @@ export default function LoansPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={collectingId === loan.id}
-                              onClick={() => handleCollect(loan)}
-                              title="Record today's collection"
-                            >
-                              <Coins className="mr-1 h-3.5 w-3.5" />
-                              Collect
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => openManualCollect(loan)}
-                              title="Record collection (custom amount/date)"
-                            >
-                              <Receipt className="h-4 w-4" />
-                            </Button>
-                            {Number(loan.savings_balance || 0) > 0 && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => openRefund(loan)}
-                                title="Refund savings"
-                              >
-                                <Undo2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                            <Button variant="ghost" size="icon" onClick={() => openHistory(loan)} title="Collection history">
-                              <History className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleEdit(loan)} title="Edit loan">
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDelete(loan.id)} title="Delete loan">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
+                          {loanActions(loan)}
                         </TableCell>
                       </TableRow>
                       );
@@ -636,6 +632,46 @@ export default function LoansPage() {
                   )}
                 </TableBody>
               </Table>
+              </div>
+              <div className="space-y-3 md:hidden">
+                {loans.length === 0 ? (
+                  <div className="py-10 text-center text-muted-foreground">
+                    <HandCoins className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
+                    No loans yet. Add your first borrower to get started.
+                  </div>
+                ) : (
+                  loans.map((loan) => {
+                    const { expected, realized } = loanProfit(loan);
+                    const progress = expected > 0 ? Math.min(100, (realized / expected) * 100) : 0;
+                    return (
+                      <div key={loan.id} className="rounded-lg border border-border/60 p-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="font-medium">{loan.person_name}</p>
+                          <span className="text-sm capitalize text-muted-foreground">{loan.frequency}</span>
+                        </div>
+                        <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                          <dt className="text-muted-foreground">Outstanding</dt>
+                          <dd className="text-right font-medium">{formatCurrency(loan.remaining_balance || 0)}</dd>
+                          <dt className="text-muted-foreground">Payment</dt>
+                          <dd className="text-right">{formatCurrency(getMonthlyFlow(loan))}</dd>
+                          <dt className="text-muted-foreground">Next due</dt>
+                          <dd className="text-right">{getNextPaymentDate(loan)}</dd>
+                          <dt className="text-muted-foreground">Savings held</dt>
+                          <dd className="text-right">{formatCurrency(loan.savings_balance || 0)}</dd>
+                          <dt className="text-muted-foreground">Profit</dt>
+                          <dd className="text-right">
+                            {formatCurrency(expected)}{" "}
+                            <span className="text-xs text-chart-2">({formatCurrency(realized)} earned)</span>
+                          </dd>
+                        </dl>
+                        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                          <div className="h-full rounded-full bg-chart-2" style={{ width: `${progress}%` }} />
+                        </div>
+                        <div className="mt-3 flex flex-wrap justify-end gap-1">{loanActions(loan)}</div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </CardContent>
           </Card>
