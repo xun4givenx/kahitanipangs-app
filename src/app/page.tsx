@@ -354,6 +354,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               {data?.recentTransactions?.length ? (
+                <div className="w-full overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -377,6 +378,7 @@ export default function DashboardPage() {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               ) : (
                 <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
                   <Receipt className="h-10 w-10 text-muted-foreground/40" />

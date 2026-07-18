@@ -266,6 +266,7 @@ export default function DebtsPage() {
             <Card>
               <CardContent className="pt-6">
                 {debts.length ? (
+                  <div className="w-full overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -303,6 +304,7 @@ export default function DebtsPage() {
                       ))}
                     </TableBody>
                   </Table>
+                  </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
                     <CreditCardIcon className="h-10 w-10 text-muted-foreground/40" />
@@ -342,6 +344,7 @@ export default function DebtsPage() {
                 <Card>
                   <CardHeader><CardTitle>Month-by-Month Schedule</CardTitle></CardHeader>
                   <CardContent className="max-h-96 overflow-auto">
+                    <div className="w-full overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -371,6 +374,7 @@ export default function DebtsPage() {
                         ))}
                       </TableBody>
                     </Table>
+                    </div>
                     {(activePlan.schedule || []).length > 24 && (
                       <p className="mt-2 text-sm text-muted-foreground">
                         Showing first 24 of {activePlan.schedule.length} months
@@ -394,6 +398,7 @@ export default function DebtsPage() {
             <Card>
               <CardContent className="pt-6">
                 {payments.length ? (
+                  <div className="w-full overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -416,6 +421,7 @@ export default function DebtsPage() {
                       ))}
                     </TableBody>
                   </Table>
+                  </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
                     <Receipt className="h-10 w-10 text-muted-foreground/40" />

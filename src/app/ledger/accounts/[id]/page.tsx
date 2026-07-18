@@ -59,6 +59,7 @@ export default function AccountRegisterPage() {
         </div>
 
         <Card>
+          <div className="w-full overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -89,6 +90,7 @@ export default function AccountRegisterPage() {
               )}
             </TableBody>
           </Table>
+          </div>
         </Card>
       </div>
     </AppShell>

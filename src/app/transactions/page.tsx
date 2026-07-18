@@ -336,6 +336,7 @@ export default function TransactionsPage() {
             <Card>
               <CardContent className="pt-6">
                 {transactions.length ? (
+                  <div className="w-full overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -368,6 +369,7 @@ export default function TransactionsPage() {
                       ))}
                     </TableBody>
                   </Table>
+                  </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
                     <Receipt className="h-10 w-10 text-muted-foreground/40" />
@@ -384,6 +386,7 @@ export default function TransactionsPage() {
               <CardHeader><CardTitle>Recurring Transactions</CardTitle></CardHeader>
               <CardContent>
                 {scheduled.length ? (
+                  <div className="w-full overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -410,6 +413,7 @@ export default function TransactionsPage() {
                       ))}
                     </TableBody>
                   </Table>
+                  </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
                     <Repeat className="h-10 w-10 text-muted-foreground/40" />

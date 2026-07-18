@@ -536,6 +536,7 @@ export default function LoansPage() {
               <CardDescription>{loans.length} loan{loans.length === 1 ? "" : "s"} outstanding</CardDescription>
             </CardHeader>
             <CardContent>
+              <div className="w-full overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -635,6 +636,7 @@ export default function LoansPage() {
                   )}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         </div>

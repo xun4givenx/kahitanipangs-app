@@ -92,6 +92,7 @@ export default function TrialBalancePage() {
         )}
 
         <Card>
+          <div className="w-full overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -139,6 +140,7 @@ export default function TrialBalancePage() {
               )}
             </TableBody>
           </Table>
+          </div>
         </Card>
       </div>
     </AppShell>
