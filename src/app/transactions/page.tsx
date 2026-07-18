@@ -183,7 +183,7 @@ export default function TransactionsPage() {
               <DialogContent>
                 <DialogHeader><DialogTitle>New Recurring Transaction</DialogTitle></DialogHeader>
                 <form onSubmit={handleRecurringSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Type</Label>
                       <Select value={recurringForm.type} onValueChange={(v) => setRecurringForm({ ...recurringForm, type: v })}>
@@ -215,7 +215,7 @@ export default function TransactionsPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Amount</Label>
                       <Input type="number" step="0.01" value={recurringForm.amount} onChange={(e) => setRecurringForm({ ...recurringForm, amount: e.target.value })} required />
@@ -240,7 +240,7 @@ export default function TransactionsPage() {
               <DialogContent>
                 <DialogHeader><DialogTitle>{editing ? "Edit" : "New"} Transaction</DialogTitle></DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Type</Label>
                       <Select
