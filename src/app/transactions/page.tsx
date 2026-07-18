@@ -151,6 +151,22 @@ export default function TransactionsPage() {
 
   const filteredCategories = categories.filter((c) => c.type === form.type);
 
+  function txActions(t: (typeof transactions)[number]) {
+    return (
+      <div className="flex gap-1">
+        <Button variant="ghost" size="icon" onClick={() => openEdit(t)}>
+          <Pencil className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={() => handleDuplicate(t.id)}>
+          <Copy className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="icon" onClick={() => handleDelete(t.id)}>
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <AppShell>
       <div className="space-y-6">
@@ -336,7 +352,8 @@ export default function TransactionsPage() {
             <Card>
               <CardContent className="pt-6">
                 {transactions.length ? (
-                  <div className="w-full overflow-x-auto">
+                  <>
+                  <div className="hidden w-full overflow-x-auto md:block">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -359,17 +376,40 @@ export default function TransactionsPage() {
                             {t.type === "income" ? "+" : "-"}{formatCurrency(t.amount)}
                           </TableCell>
                           <TableCell>
-                            <div className="flex gap-1">
-                              <Button variant="ghost" size="icon" onClick={() => openEdit(t)}><Pencil className="h-4 w-4" /></Button>
-                              <Button variant="ghost" size="icon" onClick={() => handleDuplicate(t.id)}><Copy className="h-4 w-4" /></Button>
-                              <Button variant="ghost" size="icon" onClick={() => handleDelete(t.id)}><Trash2 className="h-4 w-4" /></Button>
-                            </div>
+                            {txActions(t)}
                           </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
                   </div>
+                  <div className="space-y-3 md:hidden">
+                    {transactions.map((t) => (
+                      <div key={t.id} className="rounded-lg border border-border/60 p-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="truncate font-medium">{t.description}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatDate(t.date)} · {(t.accounts as { name: string })?.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {(t.categories as { name: string })?.name || "—"}
+                            </p>
+                          </div>
+                          <span
+                            className={`shrink-0 font-medium ${
+                              t.type === "income" ? "text-green-600" : "text-red-600"
+                            }`}
+                          >
+                            {t.type === "income" ? "+" : "-"}
+                            {formatCurrency(t.amount)}
+                          </span>
+                        </div>
+                        <div className="mt-2 flex justify-end">{txActions(t)}</div>
+                      </div>
+                    ))}
+                  </div>
+                  </>
                 ) : (
                   <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
                     <Receipt className="h-10 w-10 text-muted-foreground/40" />
