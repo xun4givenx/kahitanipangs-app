@@ -1,19 +1,49 @@
+"use client";
+
 import { Sidebar } from "@/components/layout/sidebar";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { Toaster } from "@/components/ui/sonner";
+import { Button } from "@/components/ui/button";
+import { Play, Bell } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { navGroups } from "@/components/layout/nav-items";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  
+  // Find the current page label for the header
+  let currentPage = "Overview";
+  for (const group of navGroups) {
+    const item = group.items.find(i => i.href === pathname);
+    if (item) {
+      currentPage = item.label;
+      break;
+    }
+  }
+
   return (
-    <div className="flex min-h-screen bg-background relative overflow-hidden">
-      {/* Subtle background gradients for premium feel */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[30%] h-[30%] bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
-      
+    <div className="flex h-screen bg-background text-foreground overflow-hidden">
       <Sidebar />
-      <div className="flex flex-1 flex-col z-10">
+      <div className="flex flex-1 flex-col z-10 min-w-0">
         <MobileNav />
-        <main className="flex-1 overflow-auto">
-          <div className="container mx-auto max-w-7xl p-4 lg:p-8">
+        {/* Top Header Bar */}
+        <header className="hidden lg:flex h-[72px] items-center justify-between border-b border-border px-8 bg-background">
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-bold tracking-tight">{currentPage}</h1>
+          </div>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+              <Bell className="h-5 w-5" />
+            </Button>
+            <Button className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-md font-semibold tracking-wide">
+              <Play className="mr-2 h-4 w-4 fill-current" />
+              Start Action
+            </Button>
+          </div>
+        </header>
+        
+        <main className="flex-1 overflow-auto bg-[#0E0F14]"> {/* Slightly darker inside content like mockup */}
+          <div className="p-6 lg:p-8">
             {children}
           </div>
         </main>

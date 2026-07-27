@@ -10,62 +10,66 @@
 
 @layer base {
   :root {
-    --background: 240 10% 4%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 6%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 6%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 160 84% 39%; /* Emerald Green */
+    --background: 230 20% 8%; /* Deep indigo/slate */
+    --foreground: 210 20% 98%;
+    --card: 230 15% 12%; /* Flat elevated surface */
+    --card-foreground: 210 20% 98%;
+    --popover: 230 15% 12%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 262 80% 50%; /* Vibrant Purple */
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 6% 15%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 6% 15%;
-    --muted-foreground: 240 5% 65%;
-    --accent: 240 6% 15%;
-    --accent-foreground: 0 0% 98%;
+    --secondary: 230 15% 18%; /* Darker interactive elements */
+    --secondary-foreground: 210 20% 98%;
+    --muted: 230 15% 16%;
+    --muted-foreground: 230 10% 60%;
+    --accent: 230 15% 18%;
+    --accent-foreground: 210 20% 98%;
     --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 6% 15%;
-    --input: 240 6% 15%;
-    --ring: 160 84% 39%;
-    --chart-1: 160 84% 39%; /* Emerald */
-    --chart-2: 195 80% 50%; /* Cyan */
-    --chart-3: 45 93% 47%; /* Amber */
-    --chart-4: 280 65% 60%; /* Purple */
-    --chart-5: 340 75% 55%; /* Pink */
-    --radius: 0.75rem;
-    --sidebar: 240 10% 4%;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 160 84% 39%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 230 15% 16%; /* Extremely faint */
+    --input: 230 15% 16%;
+    --ring: 262 80% 50%;
+    
+    /* Specific accent colors from mockup */
+    --chart-1: 152 76% 45%; /* Neon Green */
+    --chart-2: 0 84% 60%; /* Alert Red */
+    --chart-3: 200 80% 50%; /* Cyan */
+    --chart-4: 262 80% 50%; /* Purple */
+    --chart-5: 45 93% 47%; /* Amber */
+    
+    --radius: 0.5rem; /* Sharper corners like mockup */
+    
+    --sidebar: 230 20% 8%;
+    --sidebar-foreground: 210 20% 98%;
+    --sidebar-primary: 262 80% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 6% 15%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 240 6% 15%;
-    --sidebar-ring: 160 84% 39%;
+    --sidebar-accent: 230 15% 14%;
+    --sidebar-accent-foreground: 210 20% 98%;
+    --sidebar-border: 230 15% 12%;
+    --sidebar-ring: 262 80% 50%;
   }
 
   .dark {
     /* Forcing dark mode variables to match root since we are going Dark Mode first */
-    --background: 240 10% 4%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 6%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 6%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 160 84% 39%;
+    --background: 230 20% 8%;
+    --foreground: 210 20% 98%;
+    --card: 230 15% 12%;
+    --card-foreground: 210 20% 98%;
+    --popover: 230 15% 12%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 262 80% 50%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 6% 15%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 6% 15%;
-    --muted-foreground: 240 5% 65%;
-    --accent: 240 6% 15%;
-    --accent-foreground: 0 0% 98%;
+    --secondary: 230 15% 18%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 230 15% 16%;
+    --muted-foreground: 230 10% 60%;
+    --accent: 230 15% 18%;
+    --accent-foreground: 210 20% 98%;
     --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 6% 15%;
-    --input: 240 6% 15%;
-    --ring: 160 84% 39%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 230 15% 16%;
+    --input: 230 15% 16%;
+    --ring: 262 80% 50%;
   }
 
   * {

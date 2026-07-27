@@ -126,27 +126,21 @@ export default function DashboardPage() {
   return (
     <AppShell>
       <div className="space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-            <p className="text-muted-foreground">Overview of your financial health</p>
-          </div>
+        <div className="flex justify-end">
           <AddSalaryDialog onSuccess={loadDashboard} />
         </div>
-
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {stats.map((stat) => {
             const Icon = stat.icon;
             return (
-              <Card key={stat.label}>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    {stat.label}
-                  </CardTitle>
-                  <Icon className={`h-4 w-4 ${stat.color}`} />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stat.value}</div>
+              <Card key={stat.label} className="border-border/60 shadow-none hover:bg-secondary/20 transition-colors">
+                <CardContent className="p-5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Icon className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{stat.label}</span>
+                  </div>
+                  <div className="text-3xl font-bold tracking-tight">{stat.value}</div>
+                  <div className={`text-xs mt-2 font-medium ${stat.color}`}>Updated just now</div>
                 </CardContent>
               </Card>
             );
@@ -281,22 +275,22 @@ export default function DashboardPage() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="flex items-center gap-3 rounded-xl bg-muted/40 p-4 shadow-sm">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-chart-3/15">
-              <TrendingUp className="h-5 w-5 text-chart-3" />
+          <div className="flex items-center gap-4 rounded-xl border border-border/60 bg-card p-5">
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-chart-3/20">
+              <TrendingUp className="h-6 w-6 text-chart-3" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Expected profit</p>
-              <p className="text-xl font-bold">{formatCurrency(data?.totalExpectedProfit || 0)}</p>
+              <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Expected profit</p>
+              <p className="text-2xl font-bold mt-1">{formatCurrency(data?.totalExpectedProfit || 0)}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3 rounded-xl bg-muted/40 p-4 shadow-sm">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-chart-2/15">
-              <PiggyBank className="h-5 w-5 text-chart-2" />
+          <div className="flex items-center gap-4 rounded-xl border border-border/60 bg-card p-5">
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-chart-2/20">
+              <PiggyBank className="h-6 w-6 text-chart-2" />
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Realized profit</p>
-              <p className="text-xl font-bold">{formatCurrency(data?.totalRealizedProfit || 0)}</p>
+              <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Realized profit</p>
+              <p className="text-2xl font-bold mt-1">{formatCurrency(data?.totalRealizedProfit || 0)}</p>
             </div>
           </div>
         </div>
@@ -417,18 +411,18 @@ export default function DashboardPage() {
               <Calendar className="h-5 w-5" />
               <CardTitle>Upcoming Payments</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               {data?.upcomingPayments?.length ? (
-                <div className="space-y-3">
+                <div className="divide-y divide-border/40">
                   {data.upcomingPayments.map((p) => (
-                    <div key={p.id} className="flex items-center justify-between rounded-xl bg-muted/40 p-3">
+                    <div key={p.id} className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
                       <div>
-                        <p className="font-medium">{p.description}</p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="font-medium text-[15px]">{p.description}</p>
+                        <p className="text-sm text-muted-foreground mt-0.5">
                           {formatDate(p.next_occurrence)} · {p.frequency}
                         </p>
                       </div>
-                      <Badge variant={p.type === "income" ? "default" : "destructive"}>
+                      <Badge variant={p.type === "income" ? "default" : "destructive"} className="rounded-md px-2 py-1">
                         {p.type === "income" ? "+" : "-"}
                         {formatCurrency(p.amount)}
                       </Badge>

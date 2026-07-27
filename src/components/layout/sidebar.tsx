@@ -4,16 +4,19 @@ import { Wallet } from "lucide-react";
 
 export function Sidebar() {
   return (
-    <aside className="hidden h-screen w-[280px] flex-col bg-sidebar/95 backdrop-blur-md border-r border-border/50 lg:flex shadow-[4px_0_24px_rgba(0,0,0,0.2)] z-20">
+    <aside className="hidden h-screen w-[260px] flex-col bg-sidebar border-r border-border lg:flex z-20">
       <div className="flex h-[72px] items-center px-6">
         <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/20 border border-primary/30">
-            <Wallet className="h-4 w-4 text-primary" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <Wallet className="h-4 w-4" />
           </div>
-          <span className="text-lg font-bold tracking-tight text-sidebar-foreground">Money Manager</span>
+          <div>
+            <div className="text-[15px] font-bold tracking-tight leading-tight text-sidebar-foreground">Ultima</div>
+            <div className="text-[11px] font-medium text-muted-foreground leading-none mt-1">AI Dialer Platform</div>
+          </div>
         </Link>
       </div>
-      <div className="px-4 py-2 flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto">
         <NavContent />
       </div>
     </aside>
