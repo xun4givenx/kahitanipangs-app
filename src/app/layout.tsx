@@ -16,7 +16,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Money Manager",
+  title: "KahitaNiPangs",
   description: "Personal finance management with debt tracking and AI advice",
 };
 

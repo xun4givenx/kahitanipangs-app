@@ -27,14 +27,14 @@ export function MobileNav() {
         <SheetContent side="left" className="flex w-72 flex-col p-0">
           <SheetHeader className="h-14 justify-center border-b border-border/40 px-4">
             <SheetTitle className="text-lg font-bold tracking-tight">
-              Money Manager
+              KahitaNiPangs
             </SheetTitle>
           </SheetHeader>
           <NavContent onNavigate={() => setOpen(false)} />
         </SheetContent>
       </Sheet>
       <Link href="/" className="text-lg font-bold tracking-tight">
-        Money Manager
+        KahitaNiPangs
       </Link>
     </header>
   );
