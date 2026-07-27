@@ -25,16 +25,20 @@ export async function recordLoanDisbursementGL(
     principalAmount: number;
     amountReleased: number;
     advancedInterestAmount: number;
+    fundingSource: "reinvested" | "fresh_capital";
   }
 ) {
   // 1140 - Loans Receivable
-  // 1150 - Cash on Collected Loans (Using this as the cash source for now, could be dynamic later)
+  // 1150 - Cash on Collected Loans (If reinvested)
+  // 3200 - Owner's Contributions (If fresh capital)
   // 4120 - Interest Income (if advanced interest)
   const loansReceivableId = await resolveAccountByCode(supabase, userId, "1140");
-  const cashAccountId = await resolveAccountByCode(supabase, userId, "1150");
   const interestIncomeId = await resolveAccountByCode(supabase, userId, "4120");
+  
+  const sourceCode = params.fundingSource === "fresh_capital" ? "3200" : "1150";
+  const sourceAccountId = await resolveAccountByCode(supabase, userId, sourceCode);
 
-  if (!loansReceivableId || !cashAccountId || !interestIncomeId) {
+  if (!loansReceivableId || !sourceAccountId || !interestIncomeId) {
     console.error("Missing required GL accounts for loan disbursement.");
     return { ok: false, error: "Missing GL accounts." };
   }
@@ -49,12 +53,12 @@ export async function recordLoanDisbursementGL(
     line_memo: `Loan principal - ${params.personName}`,
   });
 
-  // Credit: Cash out
+  // Credit: Source of funds
   lines.push({
-    ledger_account_id: cashAccountId,
+    ledger_account_id: sourceAccountId,
     debit: 0,
     credit: params.amountReleased,
-    line_memo: `Loan disbursement - ${params.personName}`,
+    line_memo: `Loan disbursement (${params.fundingSource}) - ${params.personName}`,
   });
 
   // Credit: Advanced Interest Income (if any)

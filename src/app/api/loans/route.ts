@@ -67,6 +67,7 @@ export async function POST(request: Request) {
     principalAmount: data.total_amount,
     amountReleased: data.amount_released,
     advancedInterestAmount: data.advanced_interest ? interestTotal : 0,
+    fundingSource: data.funding_source,
   });
 
   return jsonOk(data, 201);
