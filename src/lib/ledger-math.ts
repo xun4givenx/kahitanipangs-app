@@ -162,26 +162,47 @@ export const DEFAULT_COA: {
   name: string;
   type: LedgerAccountType;
   subtype?: string;
+  parent_code?: string;
 }[] = [
-  // Assets (1xxx)
-  { code: "1000", name: "Cash on Hand", type: "asset", subtype: "cash" },
-  { code: "1010", name: "Bank", type: "asset", subtype: "bank" },
-  { code: "1100", name: "Accounts Receivable", type: "asset", subtype: "receivable" },
-  { code: "1200", name: "Loans Receivable", type: "asset", subtype: "receivable" },
-  { code: "1210", name: "Cash on Collected Loans", type: "asset", subtype: "cash" },
-  // Liabilities (2xxx)
-  { code: "2000", name: "Accounts Payable", type: "liability", subtype: "payable" },
-  { code: "2100", name: "Debts Payable", type: "liability", subtype: "payable" },
-  { code: "2200", name: "Borrower Savings Payable", type: "liability", subtype: "payable" },
-  // Equity (3xxx)
-  { code: "3000", name: "Owner's Equity", type: "equity" },
-  { code: "3100", name: "Owner's Contributions", type: "equity" },
-  { code: "3200", name: "Owner's Drawings", type: "equity" },
-  { code: "3900", name: "Retained Earnings", type: "equity" },
-  // Income (4xxx)
-  { code: "4000", name: "Service Income", type: "income" },
-  { code: "4100", name: "Interest Income", type: "income" },
-  // Expenses (5xxx)
-  { code: "5000", name: "Supplies", type: "expense" },
-  { code: "5100", name: "Fees", type: "expense" },
+  // Assets (1000)
+  { code: "1000", name: "Assets", type: "asset" },
+  { code: "1100", name: "Current Assets", type: "asset", parent_code: "1000" },
+  { code: "1110", name: "Cash on Hand", type: "asset", subtype: "cash", parent_code: "1100" },
+  { code: "1120", name: "Bank Accounts", type: "asset", subtype: "bank", parent_code: "1100" },
+  { code: "1130", name: "Accounts Receivable", type: "asset", subtype: "receivable", parent_code: "1100" },
+  { code: "1140", name: "Loans Receivable", type: "asset", subtype: "receivable", parent_code: "1100" },
+  { code: "1150", name: "Cash on Collected Loans", type: "asset", subtype: "cash", parent_code: "1100" },
+  { code: "1200", name: "Fixed Assets", type: "asset", parent_code: "1000" },
+  { code: "1210", name: "Equipment", type: "asset", parent_code: "1200" },
+  { code: "1220", name: "Real Estate", type: "asset", parent_code: "1200" },
+  // Liabilities (2000)
+  { code: "2000", name: "Liabilities", type: "liability" },
+  { code: "2100", name: "Current Liabilities", type: "liability", parent_code: "2000" },
+  { code: "2110", name: "Accounts Payable", type: "liability", subtype: "payable", parent_code: "2100" },
+  { code: "2120", name: "Taxes Payable", type: "liability", subtype: "payable", parent_code: "2100" },
+  { code: "2130", name: "Debts Payable", type: "liability", subtype: "payable", parent_code: "2100" },
+  { code: "2140", name: "Borrower Savings Payable", type: "liability", subtype: "payable", parent_code: "2100" },
+  { code: "2200", name: "Long-Term Liabilities", type: "liability", parent_code: "2000" },
+  { code: "2210", name: "Long-Term Loans", type: "liability", parent_code: "2200" },
+  // Equity (3000)
+  { code: "3000", name: "Equity", type: "equity" },
+  { code: "3100", name: "Owner's Equity", type: "equity", parent_code: "3000" },
+  { code: "3200", name: "Owner's Contributions", type: "equity", parent_code: "3000" },
+  { code: "3300", name: "Owner's Drawings", type: "equity", parent_code: "3000" },
+  { code: "3900", name: "Retained Earnings", type: "equity", parent_code: "3000" },
+  // Income (4000)
+  { code: "4000", name: "Income", type: "income" },
+  { code: "4100", name: "Operating Revenue", type: "income", parent_code: "4000" },
+  { code: "4110", name: "Service Income", type: "income", parent_code: "4100" },
+  { code: "4120", name: "Interest Income", type: "income", parent_code: "4100" },
+  { code: "4200", name: "Other Income", type: "income", parent_code: "4000" },
+  // Expenses (5000)
+  { code: "5000", name: "Expenses", type: "expense" },
+  { code: "5100", name: "Cost of Goods Sold", type: "expense", parent_code: "5000" },
+  { code: "5200", name: "Operating Expenses", type: "expense", parent_code: "5000" },
+  { code: "5210", name: "Supplies", type: "expense", parent_code: "5200" },
+  { code: "5220", name: "Fees & Charges", type: "expense", parent_code: "5200" },
+  { code: "5230", name: "Rent Expense", type: "expense", parent_code: "5200" },
+  { code: "5240", name: "Tax Expense", type: "expense", parent_code: "5200" },
+  { code: "5300", name: "Other Expenses", type: "expense", parent_code: "5000" },
 ];

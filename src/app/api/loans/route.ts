@@ -1,4 +1,5 @@
 import { getAuthUser, jsonError, jsonOk } from "@/lib/api-helpers";
+import { recordLoanDisbursementGL } from "@/lib/server/gl-integration";
 
 export async function GET() {
   const auth = await getAuthUser();
@@ -56,5 +57,17 @@ export async function POST(request: Request) {
     .single();
 
   if (error) return jsonError(error.message, 500);
+
+  // Trigger GL Integration
+  const interestTotal = data.total_amount * (data.interest_rate / 100);
+  await recordLoanDisbursementGL(auth.supabase, auth.user.id, {
+    loanId: data.id,
+    personName: data.person_name,
+    startDate: data.start_date,
+    principalAmount: data.total_amount,
+    amountReleased: data.amount_released,
+    advancedInterestAmount: data.advanced_interest ? interestTotal : 0,
+  });
+
   return jsonOk(data, 201);
 }

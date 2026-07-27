@@ -60,8 +60,11 @@ export async function seedDefaultCoA(
   if (count && count > 0) return { ok: true, data: { inserted: 0 } };
 
   const books: Book[] = ["business", "personal"];
-  const rows = books.flatMap((book) =>
-    DEFAULT_COA.map((a) => ({
+  let totalInserted = 0;
+
+  for (const book of books) {
+    // 1. Insert root accounts (no parent_code)
+    const rootAccounts = DEFAULT_COA.filter((a) => !a.parent_code).map((a) => ({
       user_id: userId,
       code: a.code,
       name: a.name,
@@ -70,12 +73,75 @@ export async function seedDefaultCoA(
       book,
       normal_balance: normalBalanceFor(a.type),
       is_active: true,
-    }))
-  );
+    }));
 
-  const { error } = await supabase.from("ledger_accounts").insert(rows);
-  if (error) return { ok: false, error: error.message };
-  return { ok: true, data: { inserted: rows.length } };
+    const { data: insertedRoots, error: rootErr } = await supabase
+      .from("ledger_accounts")
+      .insert(rootAccounts)
+      .select();
+
+    if (rootErr) return { ok: false, error: rootErr.message };
+    totalInserted += insertedRoots.length;
+
+    // Create a lookup map: code -> id
+    const idMap = new Map(insertedRoots.map((r) => [r.code, r.id]));
+
+    // 2. Insert Level 1 children
+    const level1 = DEFAULT_COA.filter((a) => a.parent_code && !DEFAULT_COA.find((p) => p.code === a.parent_code)?.parent_code);
+    if (level1.length > 0) {
+      const { data: insertedL1, error: l1Err } = await supabase
+        .from("ledger_accounts")
+        .insert(
+          level1.map((a) => ({
+            user_id: userId,
+            code: a.code,
+            name: a.name,
+            type: a.type,
+            subtype: a.subtype ?? null,
+            book,
+            normal_balance: normalBalanceFor(a.type),
+            parent_id: idMap.get(a.parent_code!),
+            is_active: true,
+          }))
+        )
+        .select();
+      
+      if (l1Err) return { ok: false, error: l1Err.message };
+      totalInserted += insertedL1.length;
+      insertedL1.forEach((r) => idMap.set(r.code, r.id));
+    }
+
+    // 3. Insert Level 2 children
+    const level2 = DEFAULT_COA.filter((a) => {
+      if (!a.parent_code) return false;
+      const parent = DEFAULT_COA.find((p) => p.code === a.parent_code);
+      return parent && parent.parent_code;
+    });
+
+    if (level2.length > 0) {
+      const { data: insertedL2, error: l2Err } = await supabase
+        .from("ledger_accounts")
+        .insert(
+          level2.map((a) => ({
+            user_id: userId,
+            code: a.code,
+            name: a.name,
+            type: a.type,
+            subtype: a.subtype ?? null,
+            book,
+            normal_balance: normalBalanceFor(a.type),
+            parent_id: idMap.get(a.parent_code!),
+            is_active: true,
+          }))
+        )
+        .select();
+      
+      if (l2Err) return { ok: false, error: l2Err.message };
+      totalInserted += insertedL2.length;
+    }
+  }
+
+  return { ok: true, data: { inserted: totalInserted } };
 }
 
 export async function listAccounts(

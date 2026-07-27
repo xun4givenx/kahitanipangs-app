@@ -4,6 +4,7 @@ import {
   applyLoanWithdrawal,
   ensureCashCollectionsAccount,
 } from "@/lib/server/ledger";
+import { recordLoanCollectionGL } from "@/lib/server/gl-integration";
 
 export async function GET(
   _request: Request,
@@ -57,6 +58,21 @@ export async function POST(
 
     if (txError) return jsonError(txError.message, 500);
 
+    // GL Integration
+    const principalPortion = loan.total_amount / loan.installments;
+    const interestPortion = loan.advanced_interest ? 0 : Number(loan.repayment_amount) - principalPortion;
+
+    await recordLoanCollectionGL(auth.supabase, auth.user.id, {
+      collectionId: collection.id,
+      loanId: loan.id,
+      personName: loan.person_name,
+      collectionDate: collection.collection_date,
+      totalCashCollected: collection.collected_amount,
+      principalPortion,
+      interestPortion,
+      savingsPortion: collection.savings_delta,
+    });
+
     return jsonOk(result.data, 201);
   }
 
@@ -70,6 +86,7 @@ export async function POST(
 
   const { collection, loan } = result.data;
   const cashAccountId = await ensureCashCollectionsAccount(auth.supabase, auth.user.id);
+  const withdrawalDate = new Date().toISOString().split("T")[0];
 
   const { error: txError } = await auth.supabase.from("transactions").insert({
     user_id: auth.user.id,
@@ -77,12 +94,24 @@ export async function POST(
     amount: Number(body.amount),
     type: "expense",
     description: "Savings refund – " + loan.person_name,
-    date: new Date().toISOString().split("T")[0],
+    date: withdrawalDate,
     loan_id: params.id,
     collection_id: collection.id,
   });
 
   if (txError) return jsonError(txError.message, 500);
+
+  // GL Integration for withdrawal
+  await recordLoanCollectionGL(auth.supabase, auth.user.id, {
+    collectionId: collection.id,
+    loanId: loan.id,
+    personName: loan.person_name,
+    collectionDate: withdrawalDate,
+    totalCashCollected: -Number(body.amount), // Negative cash means outflow
+    principalPortion: 0,
+    interestPortion: 0,
+    savingsPortion: -Number(body.amount), // Withdrawing savings
+  });
 
   return jsonOk(result.data, 201);
 }

@@ -53,7 +53,7 @@ export default function TrialBalancePage() {
     })();
   }, [book]);
 
-  const rows = (tb?.rows ?? []).filter((r) => r.debit_total > 0 || r.credit_total > 0);
+  const rows = tb?.rows ?? [];
 
   return (
     <AppShell>
