@@ -117,6 +117,19 @@ export default function ChartOfAccountsPage() {
     }
   }
 
+  async function runMigration() {
+    if (!confirm("This will delete all existing Journal Entries and perfectly regenerate them from your historical data. Are you sure?")) return;
+    
+    const toastId = toast.loading("Running migration...");
+    const res = await fetch("/api/gl/migrate", { method: "POST" });
+    if (res.ok) {
+      toast.success("Migration completed successfully!", { id: toastId });
+    } else {
+      const err = await res.json();
+      toast.error(err.error ?? "Migration failed", { id: toastId });
+    }
+  }
+
   // Filter possible parents (must be same book, same type, and not itself if editing)
   const possibleParents = accounts.filter(
     (a) => a.book === form.book && a.type === form.type && a.id !== editId
@@ -174,6 +187,9 @@ export default function ChartOfAccountsPage() {
             </p>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" onClick={runMigration}>
+              Run Historical Migration
+            </Button>
             {accounts.length === 0 && (
               <Button variant="outline" onClick={seed}>
                 Seed default accounts
