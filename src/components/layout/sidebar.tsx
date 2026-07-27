@@ -11,8 +11,8 @@ export function Sidebar() {
             <Wallet className="h-4 w-4" />
           </div>
           <div>
-            <div className="text-[15px] font-bold tracking-tight leading-tight text-sidebar-foreground">Ultima</div>
-            <div className="text-[11px] font-medium text-muted-foreground leading-none mt-1">AI Dialer Platform</div>
+            <div className="text-[15px] font-bold tracking-tight leading-tight text-sidebar-foreground">Money Manager</div>
+            <div className="text-[11px] font-medium text-muted-foreground leading-none mt-1">Personal Finance</div>
           </div>
         </Link>
       </div>

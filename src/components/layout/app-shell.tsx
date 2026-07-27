@@ -35,10 +35,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
               <Bell className="h-5 w-5" />
             </Button>
-            <Button className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-md font-semibold tracking-wide">
-              <Play className="mr-2 h-4 w-4 fill-current" />
-              Start Action
-            </Button>
           </div>
         </header>
         
