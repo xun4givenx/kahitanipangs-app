@@ -4,7 +4,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { Toaster } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
-import { Play, Bell } from "lucide-react";
+import { Bell } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { navGroups } from "@/components/layout/nav-items";
 
