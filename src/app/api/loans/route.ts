@@ -29,6 +29,7 @@ export async function POST(request: Request) {
     remaining_balance,
     advanced_interest,
     amount_released,
+    funding_source,
   } = body;
 
   if (!person_name || total_amount === undefined || !start_date || !frequency) {
@@ -49,6 +50,7 @@ export async function POST(request: Request) {
       remaining_balance: remaining_balance ?? 0,
       advanced_interest: advanced_interest ?? false,
       amount_released: amount_released ?? 0,
+      funding_source: funding_source ?? "reinvested",
     })
     .select()
     .single();

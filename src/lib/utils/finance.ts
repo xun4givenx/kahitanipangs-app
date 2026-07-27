@@ -1,4 +1,4 @@
-import { addDays, addMonths, addWeeks, addYears, format, parseISO } from "date-fns";
+import { addDays, addMonths, addWeeks, addYears, format, parseISO, startOfDay } from "date-fns";
 import type { Debt, DebtPlanMonth, DebtStrategy, Loan } from "@/types/database";
 
 export function formatCurrency(amount: number, currency = "PHP") {
@@ -179,3 +179,68 @@ export const FREQUENCIES = [
   { value: "monthly", label: "Monthly" },
   { value: "yearly", label: "Yearly" },
 ] as const;
+
+export interface LoanStatus {
+  isDelayed: boolean;
+  daysDelayed: number;
+  missedPayments: number;
+  expectedTotal: number;
+  actualTotal: number;
+  delayedAmount: number;
+  nextExpectedPaymentDate: string | null;
+}
+
+export function getLoanStatus(loan: Loan): LoanStatus {
+  if (!loan.start_date || loan.remaining_balance <= 0) {
+    return { isDelayed: false, daysDelayed: 0, missedPayments: 0, expectedTotal: 0, actualTotal: 0, delayedAmount: 0, nextExpectedPaymentDate: null };
+  }
+
+  const startDate = parseISO(loan.start_date);
+  const today = startOfDay(new Date());
+
+  let expectedOccurrences = 0;
+  let currentDate = startDate;
+
+  // Calculate occurrences due up to today
+  while (currentDate <= today && expectedOccurrences < loan.installments) {
+    expectedOccurrences++;
+    switch (loan.frequency) {
+      case "daily": currentDate = addDays(currentDate, 1); break;
+      case "weekly": currentDate = addWeeks(currentDate, 1); break;
+      case "biweekly": currentDate = addWeeks(currentDate, 2); break;
+      case "monthly": currentDate = addMonths(currentDate, 1); break;
+      default: currentDate = addMonths(currentDate, 1); break;
+    }
+  }
+
+  const nextExpectedPaymentDate = expectedOccurrences < loan.installments ? format(currentDate, "yyyy-MM-dd") : null;
+
+  const totalAmount = Number(loan.total_amount);
+  const interest = (totalAmount * Number(loan.interest_rate)) / 100;
+  const originalDue = loan.advanced_interest ? totalAmount : totalAmount + interest;
+  const actualTotal = originalDue - Number(loan.remaining_balance);
+
+  const expectedTotal = Math.min(expectedOccurrences * Number(loan.repayment_amount), originalDue);
+  const delayedAmount = Math.max(0, expectedTotal - actualTotal);
+  
+  const missedPayments = delayedAmount > 0 ? Math.ceil(delayedAmount / Number(loan.repayment_amount)) : 0;
+  
+  let daysDelayed = 0;
+  if (missedPayments > 0) {
+    if (loan.frequency === "daily") daysDelayed = missedPayments * 1;
+    else if (loan.frequency === "weekly") daysDelayed = missedPayments * 7;
+    else if (loan.frequency === "biweekly") daysDelayed = missedPayments * 14;
+    else if (loan.frequency === "monthly") daysDelayed = missedPayments * 30;
+    else if (loan.frequency === "yearly") daysDelayed = missedPayments * 365;
+  }
+
+  return {
+    isDelayed: delayedAmount > 0,
+    daysDelayed,
+    missedPayments,
+    expectedTotal,
+    actualTotal,
+    delayedAmount,
+    nextExpectedPaymentDate
+  };
+}

@@ -5,9 +5,7 @@ import { format } from "date-fns";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -16,12 +14,14 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { formatCurrency, formatDate, loanProfit } from "@/lib/utils/finance";
+import { formatCurrency, formatDate, loanProfit, getLoanStatus } from "@/lib/utils/finance";
 import type { Account, Loan, LoanCollection, LoanFrequency } from "@/types/database";
 import {
   Plus, Pencil, Trash2, HandCoins, Coins, Undo2, History, PiggyBank, Receipt,
-  TrendingUp, Wallet,
+  TrendingUp, Wallet, Clock,
 } from "lucide-react";
 
 const frequencyOptions: { value: LoanFrequency; label: string }[] = [
@@ -31,16 +31,8 @@ const frequencyOptions: { value: LoanFrequency; label: string }[] = [
   { value: "monthly", label: "Monthly" },
 ];
 
-const monthlyMultiplier: Record<LoanFrequency, number> = {
-  daily: 30.4,
-  weekly: 4.33,
-  biweekly: 2.17,
-  monthly: 1,
-};
 
-function getMonthlyFlow(loan: Loan): number {
-  return Number(loan.repayment_amount || 0) * (monthlyMultiplier[loan.frequency] || 1);
-}
+
 
 function getNextPaymentDate(loan: Loan): string {
   if (!loan.start_date) return "—";
@@ -61,6 +53,7 @@ const initialForm = {
   interest_rate: "",
   start_date: new Date().toISOString().split("T")[0],
   frequency: "monthly" as LoanFrequency,
+  funding_source: "reinvested" as "reinvested" | "fresh_capital",
   installments: "",
   advanced_interest: false,
 };
@@ -84,6 +77,19 @@ export default function LoansPage() {
   const [editCollection, setEditCollection] = useState<LoanCollection | null>(null);
   const [editCollectionForm, setEditCollectionForm] = useState({ amount: "", date: "", note: "" });
   const [editingCollection, setEditingCollection] = useState(false);
+  const [filter, setFilter] = useState<"all" | "active" | "delayed" | "completed">("active");
+
+  const filteredLoans = useMemo(() => {
+    return loans.filter((l) => {
+      if (filter === "all") return true;
+      if (filter === "completed") return Number(l.remaining_balance) <= 0;
+      if (filter === "active") return Number(l.remaining_balance) > 0;
+      if (filter === "delayed") {
+        return getLoanStatus(l).isDelayed;
+      }
+      return true;
+    });
+  }, [loans, filter]);
 
   async function load() {
     const res = await fetch("/api/loans");
@@ -144,6 +150,7 @@ export default function LoansPage() {
       interest_rate: Number(form.interest_rate) || 0,
       start_date: form.start_date,
       frequency: form.frequency,
+      funding_source: form.funding_source,
       installments: Number(form.installments) || 0,
       repayment_amount: Number(computedLoan.repaymentAmount.toFixed(2)),
       remaining_balance: Number(computedLoan.remainingBalance.toFixed(2)),
@@ -178,6 +185,7 @@ export default function LoansPage() {
       interest_rate: loan.interest_rate?.toString() || "",
       start_date: loan.start_date || "",
       frequency: loan.frequency || "monthly",
+      funding_source: loan.funding_source || "reinvested",
       installments: loan.installments?.toString() || "",
       advanced_interest: Boolean(loan.advanced_interest),
     });
@@ -504,6 +512,19 @@ export default function LoansPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
+                    <Label>Source of Funds</Label>
+                    <Select
+                      value={form.funding_source}
+                      onValueChange={(v) => setForm({ ...form, funding_source: v as "reinvested" | "fresh_capital" })}
+                    >
+                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="reinvested">Reinvested Proceeds</SelectItem>
+                        <SelectItem value="fresh_capital">Fresh Capital</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
                     <Label>Number of installments</Label>
                     <Input
                       type="number"
@@ -564,117 +585,109 @@ export default function LoansPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Existing borrowers</CardTitle>
-              <CardDescription>{loans.length} loan{loans.length === 1 ? "" : "s"} outstanding</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="hidden w-full overflow-x-auto md:block">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Borrower</TableHead>
-                    <TableHead className="text-right">Principal</TableHead>
-                    <TableHead className="text-right">Outstanding</TableHead>
-                    <TableHead className="text-right">Payment</TableHead>
-                    <TableHead>Frequency</TableHead>
-                    <TableHead>Next due</TableHead>
-                    <TableHead className="text-right">Savings held</TableHead>
-                    <TableHead className="text-right">Profit</TableHead>
-                    <TableHead className="w-44" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loans.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={9} className="py-10 text-center text-muted-foreground">
-                        <HandCoins className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
-                        No loans yet. Add your first borrower to get started.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    loans.map((loan) => {
-                      const { expected, realized } = loanProfit(loan);
-                      const progress = expected > 0 ? Math.min(100, (realized / expected) * 100) : 0;
-                      return (
-                      <TableRow key={loan.id} className="hover:bg-muted/40">
-                        <TableCell className="font-medium">{loan.person_name}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(loan.total_amount || 0)}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(loan.remaining_balance || 0)}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(getMonthlyFlow(loan))}</TableCell>
-                        <TableCell className="capitalize">{loan.frequency}</TableCell>
-                        <TableCell>{getNextPaymentDate(loan)}</TableCell>
-                        <TableCell className="text-right">
-                          <span className="inline-flex items-center gap-1 font-medium text-chart-2">
-                            <PiggyBank className="h-3.5 w-3.5" />
-                            {formatCurrency(loan.savings_balance || 0)}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="ml-auto w-32">
-                            <p className="font-semibold text-foreground">{formatCurrency(expected)}</p>
-                            <p className="text-xs text-chart-2">{formatCurrency(realized)} earned</p>
-                            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                              <div
-                                className="h-full rounded-full bg-chart-2"
-                                style={{ width: `${progress}%` }}
-                              />
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {loanActions(loan)}
-                        </TableCell>
-                      </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
-              </div>
-              <div className="space-y-3 md:hidden">
-                {loans.length === 0 ? (
-                  <div className="py-10 text-center text-muted-foreground">
-                    <HandCoins className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
-                    No loans yet. Add your first borrower to get started.
-                  </div>
-                ) : (
-                  loans.map((loan) => {
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-xl font-bold tracking-tight">Existing borrowers</h2>
+              <p className="text-sm text-muted-foreground">{filteredLoans.length} loans shown</p>
+            </div>
+            
+            <Tabs value={filter} onValueChange={(v) => setFilter(v as "all" | "active" | "delayed" | "completed")} className="w-full">
+              <TabsList className="mb-4">
+                <TabsTrigger value="all">All</TabsTrigger>
+                <TabsTrigger value="active">Active</TabsTrigger>
+                <TabsTrigger value="delayed">Delayed</TabsTrigger>
+                <TabsTrigger value="completed">Completed</TabsTrigger>
+              </TabsList>
+
+              {filteredLoans.length === 0 ? (
+                <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed py-16 text-center">
+                  <HandCoins className="h-10 w-10 text-muted-foreground/40" />
+                  <p className="text-sm text-muted-foreground">No loans match this filter.</p>
+                </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+                  {filteredLoans.map((loan) => {
                     const { expected, realized } = loanProfit(loan);
                     const progress = expected > 0 ? Math.min(100, (realized / expected) * 100) : 0;
+                    const status = getLoanStatus(loan);
+                    const isCompleted = Number(loan.remaining_balance) <= 0;
+
                     return (
-                      <div key={loan.id} className="rounded-lg border border-border/60 p-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="font-medium">{loan.person_name}</p>
-                          <span className="text-sm capitalize text-muted-foreground">{loan.frequency}</span>
+                      <Card key={loan.id} className="flex flex-col">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <CardTitle className="flex items-center gap-2">
+                                {loan.person_name}
+                                {status.isDelayed && !isCompleted && (
+                                  <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">Delayed</Badge>
+                                )}
+                                {isCompleted && (
+                                  <Badge variant="default" className="bg-green-600 h-5 px-1.5 text-[10px]">Paid</Badge>
+                                )}
+                              </CardTitle>
+                              <CardDescription className="capitalize mt-1">
+                                {loan.frequency} · {loan.funding_source === "fresh_capital" ? "Fresh Capital" : "Reinvested"}
+                              </CardDescription>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-lg font-bold text-primary">
+                                {formatCurrency(loan.remaining_balance || 0)}
+                              </p>
+                              <p className="text-xs text-muted-foreground">Outstanding</p>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="flex-1 pb-3 text-sm">
+                          <div className="grid grid-cols-2 gap-y-3 gap-x-4">
+                            <div>
+                              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Clock className="h-3 w-3" /> Next Due
+                              </p>
+                              <p className="font-medium mt-0.5">{isCompleted ? "—" : getNextPaymentDate(loan)}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                <TrendingUp className="h-3 w-3" /> Payment
+                              </p>
+                              <p className="font-medium mt-0.5">{formatCurrency(loan.repayment_amount)}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                <PiggyBank className="h-3 w-3" /> Savings
+                              </p>
+                              <p className="font-medium mt-0.5 text-chart-2">{formatCurrency(loan.savings_balance || 0)}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                <HandCoins className="h-3 w-3" /> Profit
+                              </p>
+                              <p className="font-medium mt-0.5">
+                                {formatCurrency(expected)} <span className="text-[10px] text-chart-2">({formatCurrency(realized)})</span>
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="mt-4">
+                            <div className="flex justify-between text-xs mb-1">
+                              <span className="text-muted-foreground">Recovery</span>
+                              <span className="font-medium text-chart-2">{Math.round(progress)}%</span>
+                            </div>
+                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                              <div className="h-full rounded-full bg-chart-2" style={{ width: `${progress}%` }} />
+                            </div>
+                          </div>
+                        </CardContent>
+                        <div className="border-t bg-muted/20 p-2 flex flex-wrap items-center justify-end gap-1">
+                          {loanActions(loan)}
                         </div>
-                        <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                          <dt className="text-muted-foreground">Outstanding</dt>
-                          <dd className="text-right font-medium">{formatCurrency(loan.remaining_balance || 0)}</dd>
-                          <dt className="text-muted-foreground">Payment</dt>
-                          <dd className="text-right">{formatCurrency(getMonthlyFlow(loan))}</dd>
-                          <dt className="text-muted-foreground">Next due</dt>
-                          <dd className="text-right">{getNextPaymentDate(loan)}</dd>
-                          <dt className="text-muted-foreground">Savings held</dt>
-                          <dd className="text-right">{formatCurrency(loan.savings_balance || 0)}</dd>
-                          <dt className="text-muted-foreground">Profit</dt>
-                          <dd className="text-right">
-                            {formatCurrency(expected)}{" "}
-                            <span className="text-xs text-chart-2">({formatCurrency(realized)} earned)</span>
-                          </dd>
-                        </dl>
-                        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                          <div className="h-full rounded-full bg-chart-2" style={{ width: `${progress}%` }} />
-                        </div>
-                        <div className="mt-3 flex flex-wrap justify-end gap-1">{loanActions(loan)}</div>
-                      </div>
+                      </Card>
                     );
-                  })
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                  })}
+                </div>
+              )}
+            </Tabs>
+          </div>
         </div>
       </div>
 

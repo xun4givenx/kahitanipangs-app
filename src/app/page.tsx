@@ -40,10 +40,14 @@ interface DashboardData {
   monthlyExpenses: number;
   totalDebt: number;
   totalLoansOut: number;
+  totalLoansFreshCapital: number;
+  totalLoansReinvested: number;
   totalSavingsHeld: number;
   collectedToday: number;
   totalExpectedProfit: number;
   totalRealizedProfit: number;
+  dailyCollectibles: { id: string; person_name: string; repayment_amount: number; isDelayed: boolean }[];
+  delayedPayments: { id: string; person_name: string; daysDelayed: number; delayedAmount: number; repayment_amount: number }[];
   categorySpending: CategorySpending[];
   monthlySeries: MonthlyPoint[];
   recentTransactions: Transaction[];
@@ -76,6 +80,20 @@ export default function DashboardPage() {
       .then((r) => r.json())
       .then(setData)
       .finally(() => setLoading(false));
+  }
+
+  async function handleQuickCollect(loanId: string, amount: number) {
+    if (!confirm(`Collect ${formatCurrency(amount)} today?`)) return;
+    await fetch(`/api/loans/${loanId}/collections`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        kind: "collection",
+        collected_amount: amount,
+        collection_date: new Date().toISOString().split("T")[0],
+      }),
+    });
+    loadDashboard();
   }
 
   useEffect(() => {
@@ -309,9 +327,13 @@ export default function DashboardPage() {
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-chart-3/15">
                   <HandCoins className="h-5 w-5 text-chart-3" />
                 </div>
-                <div>
+                <div className="flex-1">
                   <p className="text-sm text-muted-foreground">Loans out</p>
                   <p className="text-xl font-bold">{formatCurrency(data?.totalLoansOut || 0)}</p>
+                  <div className="mt-1 flex flex-col gap-0.5 text-xs text-muted-foreground">
+                    <span className="flex justify-between"><span>Fresh Capital:</span> <span>{formatCurrency(data?.totalLoansFreshCapital || 0)}</span></span>
+                    <span className="flex justify-between"><span>Reinvested:</span> <span>{formatCurrency(data?.totalLoansReinvested || 0)}</span></span>
+                  </div>
                 </div>
               </div>
               <Button variant="ghost" size="sm" asChild>
@@ -418,6 +440,85 @@ export default function DashboardPage() {
                   <Calendar className="h-10 w-10 text-muted-foreground/40" />
                   <p className="text-sm text-muted-foreground">
                     Nothing scheduled — set up a recurring payment to plan ahead.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* --- New Sections for Loans --- */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Daily Collectibles */}
+          <Card>
+            <CardHeader className="flex flex-row items-center gap-2">
+              <CalendarCheck className="h-5 w-5 text-primary" />
+              <CardTitle>Daily Collectibles</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {data?.dailyCollectibles?.length ? (
+                <div className="space-y-3">
+                  {data.dailyCollectibles.map((c) => (
+                    <div key={c.id} className="flex items-center justify-between rounded-xl bg-muted/40 p-3">
+                      <div>
+                        <p className="font-medium flex items-center gap-2">
+                          {c.person_name}
+                          {c.isDelayed && <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">Delayed</Badge>}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Amount due: {formatCurrency(c.repayment_amount)}
+                        </p>
+                      </div>
+                      <Button size="sm" onClick={() => handleQuickCollect(c.id, c.repayment_amount)}>
+                        Collect
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
+                  <HandCoins className="h-10 w-10 text-muted-foreground/40" />
+                  <p className="text-sm text-muted-foreground">
+                    No expected collections for today!
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Delayed Payments */}
+          <Card className="border-destructive/20">
+            <CardHeader className="flex flex-row items-center gap-2 pb-2">
+              <TrendingDown className="h-5 w-5 text-destructive" />
+              <CardTitle className="text-destructive">Delayed Payments</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {data?.delayedPayments?.length ? (
+                <div className="space-y-3">
+                  {data.delayedPayments.map((p) => (
+                    <div key={p.id} className="flex items-center justify-between rounded-xl bg-destructive/5 p-3 border border-destructive/10">
+                      <div>
+                        <p className="font-medium">{p.person_name}</p>
+                        <p className="text-sm text-destructive font-medium">
+                          Delayed: {p.daysDelayed} days
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-destructive">
+                          {formatCurrency(p.delayedAmount)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Installment: {formatCurrency(p.repayment_amount)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
+                  <TrendingUp className="h-10 w-10 text-green-500/40" />
+                  <p className="text-sm text-muted-foreground">
+                    All borrowers are on schedule.
                   </p>
                 </div>
               )}

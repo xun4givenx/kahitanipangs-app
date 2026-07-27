@@ -131,6 +131,7 @@ export interface Loan {
   advanced_interest: boolean;
   amount_released: number;
   savings_balance: number;
+  funding_source: "reinvested" | "fresh_capital";
   created_at: string;
   updated_at: string;
 }
