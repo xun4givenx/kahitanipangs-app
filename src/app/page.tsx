@@ -126,7 +126,14 @@ export default function DashboardPage() {
     const saved = localStorage.getItem("dashboard-order");
     if (saved) {
       try {
-        setSectionOrder(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        // Reset if it's the old layout format
+        if (!parsed.includes("cash")) {
+          setSectionOrder(DEFAULT_ORDER);
+          localStorage.removeItem("dashboard-order");
+        } else {
+          setSectionOrder(parsed);
+        }
       } catch {
         setSectionOrder(DEFAULT_ORDER);
       }
