@@ -599,26 +599,26 @@ export default function LoansPage() {
                     return (
                       <Card key={loan.id} className="flex flex-col border-border/60 shadow-none hover:bg-secondary/10 transition-colors">
                         <CardHeader className="pb-3">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <CardTitle className="flex items-center gap-2 text-base">
-                                {loan.person_name}
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <CardTitle className="text-base leading-tight">
+                                <span className="break-words">{loan.person_name}</span>
                                 {status.isDelayed && !isCompleted && (
-                                  <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">Delayed</Badge>
+                                  <Badge variant="destructive" className="ml-2 inline-flex h-5 px-1.5 text-[10px] align-middle">Delayed</Badge>
                                 )}
                                 {isCompleted && (
-                                  <Badge variant="default" className="bg-green-600 h-5 px-1.5 text-[10px]">Paid</Badge>
+                                  <Badge variant="default" className="ml-2 inline-flex bg-green-600 h-5 px-1.5 text-[10px] align-middle">Paid</Badge>
                                 )}
                               </CardTitle>
-                              <CardDescription className="capitalize mt-1">
+                              <CardDescription className="capitalize mt-1.5 truncate">
                                 {loan.frequency} · {loan.funding_source === "fresh_capital" ? "Fresh Capital" : "Reinvested"}
                               </CardDescription>
                             </div>
-                            <div className="text-right">
-                              <p className="text-lg font-bold text-primary">
+                            <div className="text-right shrink-0">
+                              <p className="text-lg font-bold text-primary leading-none">
                                 {formatCurrency(loan.remaining_balance || 0)}
                               </p>
-                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Outstanding</p>
+                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">Outstanding</p>
                             </div>
                           </div>
                         </CardHeader>
