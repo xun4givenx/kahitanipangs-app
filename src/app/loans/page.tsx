@@ -142,6 +142,22 @@ export default function LoansPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    
+    let finalRemainingBalance = Number(computedLoan.remainingBalance.toFixed(2));
+    
+    if (editingId) {
+      const oldLoan = loans.find(l => l.id === editingId);
+      if (oldLoan) {
+        const oldTotal = Number(oldLoan.total_amount);
+        const oldInterest = (oldTotal * Number(oldLoan.interest_rate)) / 100;
+        const oldOriginalDue = oldLoan.advanced_interest ? oldTotal : oldTotal + oldInterest;
+        const newOriginalDue = computedLoan.remainingBalance;
+        const delta = newOriginalDue - oldOriginalDue;
+        
+        finalRemainingBalance = Math.max(0, Number(oldLoan.remaining_balance) + delta);
+      }
+    }
+
     const payload = {
       person_name: form.person_name,
       total_amount: Number(form.total_amount),
@@ -151,7 +167,7 @@ export default function LoansPage() {
       funding_source: form.funding_source,
       installments: Number(form.installments) || 0,
       repayment_amount: Number(computedLoan.repaymentAmount.toFixed(2)),
-      remaining_balance: Number(computedLoan.remainingBalance.toFixed(2)),
+      remaining_balance: Number(finalRemainingBalance.toFixed(2)),
       advanced_interest: form.advanced_interest,
       amount_released: Number(computedLoan.amountReleased.toFixed(2)),
     };
