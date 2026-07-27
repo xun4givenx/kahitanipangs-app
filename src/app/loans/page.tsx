@@ -445,7 +445,7 @@ export default function LoansPage() {
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="space-y-8">
           <Card>
             <CardHeader>
               <CardTitle>{editingId ? "Edit borrower loan" : "New borrower loan"}</CardTitle>
@@ -454,28 +454,28 @@ export default function LoansPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Borrower name</Label>
-                  <Input
-                    value={form.person_name}
-                    onChange={(e) => setForm({ ...form, person_name: e.target.value })}
-                    placeholder="Borrower name"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Principal amount</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={form.total_amount}
-                    onChange={(e) => setForm({ ...form, total_amount: e.target.value })}
-                    placeholder="Principal amount"
-                    required
-                  />
-                </div>
-                <div className="grid gap-4 md:grid-cols-2">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Borrower name</Label>
+                    <Input
+                      value={form.person_name}
+                      onChange={(e) => setForm({ ...form, person_name: e.target.value })}
+                      placeholder="Borrower name"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Principal amount</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={form.total_amount}
+                      onChange={(e) => setForm({ ...form, total_amount: e.target.value })}
+                      placeholder="Principal amount"
+                      required
+                    />
+                  </div>
                   <div className="space-y-2">
                     <Label>Interest rate (%)</Label>
                     <Input
@@ -495,8 +495,6 @@ export default function LoansPage() {
                       required
                     />
                   </div>
-                </div>
-                <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label>Frequency</Label>
                     <Select
@@ -512,6 +510,19 @@ export default function LoansPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
+                    <Label>Number of installments</Label>
+                    <Input
+                      type="number"
+                      value={form.installments}
+                      onChange={(e) => setForm({ ...form, installments: e.target.value })}
+                      placeholder="Installments"
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  <div className="space-y-2">
                     <Label>Source of Funds</Label>
                     <Select
                       value={form.funding_source}
@@ -524,33 +535,24 @@ export default function LoansPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Number of installments</Label>
-                    <Input
-                      type="number"
-                      value={form.installments}
-                      onChange={(e) => setForm({ ...form, installments: e.target.value })}
-                      placeholder="Number of installments"
-                      required
+                  
+                  <label className="flex items-start gap-3 rounded-xl bg-muted/40 p-3 shadow-sm md:col-span-1 lg:col-span-2">
+                    <input
+                      type="checkbox"
+                      checked={form.advanced_interest}
+                      onChange={(e) => setForm({ ...form, advanced_interest: e.target.checked })}
+                      className="mt-1 h-4 w-4 rounded border-input accent-primary"
                     />
-                  </div>
+                    <div>
+                      <span className="text-sm font-medium text-foreground">Collect interest upfront</span>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {form.advanced_interest
+                          ? "Borrower receives principal minus interest. Installments are based on principal."
+                          : "Borrower receives full principal. Installments cover principal plus interest."}
+                      </p>
+                    </div>
+                  </label>
                 </div>
-                <label className="flex items-start gap-3 rounded-xl bg-muted/40 p-3 shadow-sm">
-                  <input
-                    type="checkbox"
-                    checked={form.advanced_interest}
-                    onChange={(e) => setForm({ ...form, advanced_interest: e.target.checked })}
-                    className="mt-1 h-4 w-4 rounded border-input accent-primary"
-                  />
-                  <div>
-                    <span className="text-sm font-medium text-foreground">Collect interest upfront</span>
-                    <p className="text-xs text-muted-foreground">
-                      {form.advanced_interest
-                        ? "Borrower receives principal minus interest. Installments are based on principal."
-                        : "Borrower receives full principal. Installments cover principal plus interest."}
-                    </p>
-                  </div>
-                </label>
 
                 <div className="grid gap-3 sm:grid-cols-3">
                   <div className="rounded-xl bg-muted/40 p-4 text-center shadow-sm">
@@ -570,7 +572,7 @@ export default function LoansPage() {
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 pt-2 border-t border-border/40">
                   <Button type="submit" disabled={saving}>
                     <Plus className="mr-2 h-4 w-4" />
                     {editingId ? "Update loan" : "Add loan"}
@@ -587,7 +589,7 @@ export default function LoansPage() {
 
           <div className="space-y-4">
             <div>
-              <h2 className="text-xl font-bold tracking-tight">Existing borrowers</h2>
+              <h2 className="text-2xl font-bold tracking-tight">Existing borrowers</h2>
               <p className="text-sm text-muted-foreground">{filteredLoans.length} loans shown</p>
             </div>
             
@@ -605,7 +607,7 @@ export default function LoansPage() {
                   <p className="text-sm text-muted-foreground">No loans match this filter.</p>
                 </div>
               ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {filteredLoans.map((loan) => {
                     const { expected, realized } = loanProfit(loan);
                     const progress = expected > 0 ? Math.min(100, (realized / expected) * 100) : 0;
@@ -613,11 +615,11 @@ export default function LoansPage() {
                     const isCompleted = Number(loan.remaining_balance) <= 0;
 
                     return (
-                      <Card key={loan.id} className="flex flex-col">
+                      <Card key={loan.id} className="flex flex-col border-border/60 shadow-none hover:bg-secondary/10 transition-colors">
                         <CardHeader className="pb-3">
                           <div className="flex items-start justify-between">
                             <div>
-                              <CardTitle className="flex items-center gap-2">
+                              <CardTitle className="flex items-center gap-2 text-base">
                                 {loan.person_name}
                                 {status.isDelayed && !isCompleted && (
                                   <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">Delayed</Badge>
@@ -634,32 +636,32 @@ export default function LoansPage() {
                               <p className="text-lg font-bold text-primary">
                                 {formatCurrency(loan.remaining_balance || 0)}
                               </p>
-                              <p className="text-xs text-muted-foreground">Outstanding</p>
+                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Outstanding</p>
                             </div>
                           </div>
                         </CardHeader>
                         <CardContent className="flex-1 pb-3 text-sm">
                           <div className="grid grid-cols-2 gap-y-3 gap-x-4">
                             <div>
-                              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
                                 <Clock className="h-3 w-3" /> Next Due
                               </p>
                               <p className="font-medium mt-0.5">{isCompleted ? "—" : getNextPaymentDate(loan)}</p>
                             </div>
                             <div>
-                              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
                                 <TrendingUp className="h-3 w-3" /> Payment
                               </p>
                               <p className="font-medium mt-0.5">{formatCurrency(loan.repayment_amount)}</p>
                             </div>
                             <div>
-                              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
                                 <PiggyBank className="h-3 w-3" /> Savings
                               </p>
                               <p className="font-medium mt-0.5 text-chart-2">{formatCurrency(loan.savings_balance || 0)}</p>
                             </div>
                             <div>
-                              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
                                 <HandCoins className="h-3 w-3" /> Profit
                               </p>
                               <p className="font-medium mt-0.5">
@@ -668,7 +670,7 @@ export default function LoansPage() {
                             </div>
                           </div>
 
-                          <div className="mt-4">
+                          <div className="mt-5">
                             <div className="flex justify-between text-xs mb-1">
                               <span className="text-muted-foreground">Recovery</span>
                               <span className="font-medium text-chart-2">{Math.round(progress)}%</span>
@@ -678,7 +680,7 @@ export default function LoansPage() {
                             </div>
                           </div>
                         </CardContent>
-                        <div className="border-t bg-muted/20 p-2 flex flex-wrap items-center justify-end gap-1">
+                        <div className="border-t border-border/40 bg-muted/10 p-2 flex flex-wrap items-center justify-end gap-1">
                           {loanActions(loan)}
                         </div>
                       </Card>
