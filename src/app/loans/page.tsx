@@ -530,7 +530,7 @@ export default function LoansPage() {
                             </div>
                             <div>
                               <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                                Total Cash Collected
+                                Total Payments
                               </p>
                               <p className="font-medium mt-0.5">{formatCurrency(status.actualTotal)}</p>
                             </div>
@@ -539,6 +539,12 @@ export default function LoansPage() {
                                 Total Savings
                               </p>
                               <p className="font-medium mt-0.5 text-chart-2">{formatCurrency(loan.savings_balance || 0)}</p>
+                            </div>
+                            <div className="col-span-2 border-t border-border/40 pt-2 mt-1">
+                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                                Total Cash Collected
+                              </p>
+                              <p className="font-medium mt-0.5 text-primary">{formatCurrency(status.actualTotal + Number(loan.savings_balance || 0))}</p>
                             </div>
                             <div className="col-span-2">
                               <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -784,6 +790,13 @@ export default function LoansPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Collection history{historyLoan ? ` · ${historyLoan.person_name}` : ""}</DialogTitle>
+            {!historyLoading && historyRows.length > 0 && (
+              <p className="text-sm text-muted-foreground mt-1">
+                Total cash collected: {formatCurrency(
+                  historyRows.reduce((acc, row) => row.kind === "collection" ? acc + Number(row.collected_amount) : acc, 0)
+                )}
+              </p>
+            )}
           </DialogHeader>
           {historyLoading ? (
             <p className="py-6 text-center text-sm text-muted-foreground">Loading...</p>
