@@ -64,6 +64,7 @@ interface DashboardData {
   collectedToday: number;
   totalExpectedProfit: number;
   totalRealizedProfit: number;
+  expectedDailyCollections: number;
   dailyCollectibles: { id: string; person_name: string; repayment_amount: number; isDelayed: boolean }[];
   delayedPayments: { id: string; person_name: string; daysDelayed: number; delayedAmount: number; repayment_amount: number }[];
   categorySpending: CategorySpending[];
@@ -410,9 +411,12 @@ export default function DashboardPage() {
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-chart-5/15">
               <CalendarCheck className="h-5 w-5 text-chart-5" />
             </div>
-            <div>
+            <div className="flex-1">
               <p className="text-sm text-muted-foreground">Collected today</p>
               <p className="text-xl font-bold">{formatCurrency(data?.collectedToday || 0)}</p>
+              <div className="mt-1 flex flex-col gap-0.5 text-xs text-muted-foreground">
+                <span className="flex justify-between"><span>Expected Daily:</span> <span>{formatCurrency(data?.expectedDailyCollections || 0)}</span></span>
+              </div>
             </div>
           </CardContent>
         </Card>

@@ -65,6 +65,12 @@ export async function DELETE(
       .in("reference", colRefs);
   }
 
+  // Clean up transactions associated with this loan
+  await auth.supabase
+    .from("transactions")
+    .delete()
+    .eq("loan_id", params.id);
+
   const { error } = await auth.supabase
     .from("loans")
     .delete()

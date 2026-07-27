@@ -71,6 +71,10 @@ export async function GET() {
   const totalExpectedProfit = loans.reduce((s, l) => s + loanProfit(l).expected, 0);
   const totalRealizedProfit = loans.reduce((s, l) => s + loanProfit(l).realized, 0);
 
+  const expectedDailyCollections = loans
+    .filter(l => Number(l.remaining_balance) > 0 && l.frequency === "daily")
+    .reduce((s, l) => s + Number(l.repayment_amount), 0);
+
   const collectedLoanIdsToday = new Set(collectionsToday.map(c => c.loan_id));
   const dailyCollectibles = [];
   const delayedPayments = [];
@@ -156,5 +160,6 @@ export async function GET() {
     recentTransactions: recent || [],
     upcomingPayments: upcoming,
     accounts,
+    expectedDailyCollections,
   });
 }
