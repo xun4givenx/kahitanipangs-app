@@ -641,42 +641,38 @@ export default function LoansPage() {
                           </div>
                         </CardHeader>
                         <CardContent className="flex-1 pb-3 text-sm">
-                          <div className="grid grid-cols-2 gap-y-3 gap-x-4">
+                          <div className="grid grid-cols-2 gap-y-4 gap-x-4">
                             <div>
-                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-                                <Clock className="h-3 w-3" /> Next Due
+                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                                Principal
                               </p>
-                              <p className="font-medium mt-0.5">{isCompleted ? "—" : getNextPaymentDate(loan)}</p>
+                              <p className="font-medium mt-0.5">{formatCurrency(loan.total_amount)}</p>
                             </div>
                             <div>
-                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-                                <TrendingUp className="h-3 w-3" /> Payment
+                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                                Interest Rate
                               </p>
-                              <p className="font-medium mt-0.5">{formatCurrency(loan.repayment_amount)}</p>
+                              <p className="font-medium mt-0.5">{loan.interest_rate}%</p>
                             </div>
                             <div>
-                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-                                <PiggyBank className="h-3 w-3" /> Savings
+                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                                Total Cash Collected
+                              </p>
+                              <p className="font-medium mt-0.5">{formatCurrency(status.actualTotal)}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                                Total Savings
                               </p>
                               <p className="font-medium mt-0.5 text-chart-2">{formatCurrency(loan.savings_balance || 0)}</p>
                             </div>
-                            <div>
-                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-                                <HandCoins className="h-3 w-3" /> Profit
+                            <div className="col-span-2">
+                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                                Profit
                               </p>
                               <p className="font-medium mt-0.5">
-                                {formatCurrency(expected)} <span className="text-[10px] text-chart-2">({formatCurrency(realized)})</span>
+                                {formatCurrency(expected)} <span className="text-[10px] text-chart-2">({formatCurrency(realized)} realized)</span>
                               </p>
-                            </div>
-                          </div>
-
-                          <div className="mt-5">
-                            <div className="flex justify-between text-xs mb-1">
-                              <span className="text-muted-foreground">Recovery</span>
-                              <span className="font-medium text-chart-2">{Math.round(progress)}%</span>
-                            </div>
-                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                              <div className="h-full rounded-full bg-chart-2" style={{ width: `${progress}%` }} />
                             </div>
                           </div>
                         </CardContent>
