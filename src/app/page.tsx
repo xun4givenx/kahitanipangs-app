@@ -90,7 +90,7 @@ const tooltipStyle = {
   fontSize: 12,
 };
 
-const DEFAULT_ORDER = ["stats", "charts", "profits", "manage", "loans", "activity", "accounts"];
+const DEFAULT_ORDER = ["cash", "loans_overview", "charts", "loans", "activity", "accounts"];
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -167,12 +167,11 @@ export default function DashboardPage() {
     );
   }
 
-  const stats = [
-    { label: "Total Balance", value: formatCurrency(data?.totalBalance || 0), icon: Wallet, color: "text-primary" },
+  const cashStats = [
+    { label: "Cash on Hand", value: formatCurrency(data?.totalBalance || 0), icon: Wallet, color: "text-primary" },
     { label: "Monthly Income", value: formatCurrency(data?.monthlyIncome || 0), icon: TrendingUp, color: "text-green-600" },
     { label: "Monthly Expenses", value: formatCurrency(data?.monthlyExpenses || 0), icon: TrendingDown, color: "text-red-600" },
-    { label: "Total Debt", value: formatCurrency(data?.totalDebt || 0), icon: CreditCard, color: "text-destructive" },
-    { label: "Loans Out", value: formatCurrency(data?.totalLoansOut || 0), icon: HandCoins, color: "text-chart-3" },
+    { label: "Debt Payoff", value: formatCurrency(data?.totalDebt || 0), icon: CreditCard, color: "text-destructive" },
   ];
 
   const categorySpending = data?.categorySpending || [];
@@ -181,9 +180,9 @@ export default function DashboardPage() {
   const hasSeriesData = monthlySeries.some((m) => m.income > 0 || m.expense > 0);
 
   const sectionsContent: Record<string, React.ReactNode> = {
-    stats: (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        {stats.map((stat) => {
+    cash: (
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {cashStats.map((stat) => {
           const Icon = stat.icon;
           return (
             <Card key={stat.label} className="border-border/60 shadow-none hover:bg-secondary/20 transition-colors">
@@ -328,49 +327,8 @@ export default function DashboardPage() {
         </Card>
       </div>
     ),
-    profits: (
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="flex items-center gap-4 rounded-xl border border-border/60 bg-card p-5">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-chart-3/20">
-            <TrendingUp className="h-6 w-6 text-chart-3" />
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Expected profit</p>
-            <p className="text-2xl font-bold mt-1">{formatCurrency(data?.totalExpectedProfit || 0)}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-4 rounded-xl border border-border/60 bg-card p-5">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-chart-2/20">
-            <PiggyBank className="h-6 w-6 text-chart-2" />
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Realized profit</p>
-            <p className="text-2xl font-bold mt-1">{formatCurrency(data?.totalRealizedProfit || 0)}</p>
-          </div>
-        </div>
-      </div>
-    ),
-    manage: (
+    loans_overview: (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardContent className="flex items-center justify-between gap-4 p-6">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
-                <CreditCard className="h-5 w-5 text-destructive" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Debt payoff</p>
-                <p className="text-xl font-bold">{formatCurrency(data?.totalDebt || 0)}</p>
-              </div>
-            </div>
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/debts">
-                Manage <ArrowRight className="ml-1 h-4 w-4" />
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-
         <Card>
           <CardContent className="flex items-center justify-between gap-4 p-6">
             <div className="flex items-center gap-3">
@@ -388,9 +346,24 @@ export default function DashboardPage() {
             </div>
             <Button variant="ghost" size="sm" asChild>
               <Link href="/loans">
-                Manage <ArrowRight className="ml-1 h-4 w-4" />
+                <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="flex items-center gap-3 p-6">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-chart-5/15">
+              <CalendarCheck className="h-5 w-5 text-chart-5" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm text-muted-foreground">Collected today</p>
+              <p className="text-xl font-bold">{formatCurrency(data?.collectedToday || 0)}</p>
+              <div className="mt-1 flex flex-col gap-0.5 text-xs text-muted-foreground">
+                <span className="flex justify-between"><span>Expected Daily:</span> <span>{formatCurrency(data?.expectedDailyCollections || 0)}</span></span>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -408,14 +381,14 @@ export default function DashboardPage() {
 
         <Card>
           <CardContent className="flex items-center gap-3 p-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-chart-5/15">
-              <CalendarCheck className="h-5 w-5 text-chart-5" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/15">
+              <TrendingUp className="h-5 w-5 text-primary" />
             </div>
             <div className="flex-1">
-              <p className="text-sm text-muted-foreground">Collected today</p>
-              <p className="text-xl font-bold">{formatCurrency(data?.collectedToday || 0)}</p>
+              <p className="text-sm text-muted-foreground">Profit</p>
+              <p className="text-xl font-bold">{formatCurrency(data?.totalExpectedProfit || 0)}</p>
               <div className="mt-1 flex flex-col gap-0.5 text-xs text-muted-foreground">
-                <span className="flex justify-between"><span>Expected Daily:</span> <span>{formatCurrency(data?.expectedDailyCollections || 0)}</span></span>
+                <span className="flex justify-between"><span>Realized:</span> <span>{formatCurrency(data?.totalRealizedProfit || 0)}</span></span>
               </div>
             </div>
           </CardContent>
