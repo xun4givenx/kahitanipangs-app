@@ -424,6 +424,21 @@ export default function DashboardPage() {
     ),
     loans: (
       <div className="grid gap-6 lg:grid-cols-2">
+        <Card className="col-span-1 lg:col-span-2 border-dashed border-destructive bg-destructive/5">
+          <CardContent className="flex items-center justify-between p-4">
+            <div>
+              <p className="font-semibold text-destructive">Clean Up Old Transactions</p>
+              <p className="text-sm text-muted-foreground">Click here to remove orphaned transactions from deleted loans.</p>
+            </div>
+            <Button variant="destructive" onClick={async () => {
+              const res = await fetch('/api/loans/fix-orphans');
+              const data = await res.json();
+              alert(`Cleaned up ${data.deleted || 0} orphaned transactions! Please refresh the page.`);
+            }}>
+              Clean Up Now
+            </Button>
+          </CardContent>
+        </Card>
         <Card>
           <CardHeader className="flex flex-row items-center gap-2">
             <CalendarCheck className="h-5 w-5 text-primary" />
