@@ -496,7 +496,9 @@ export default function LoansPage() {
                               <CardTitle className="text-base leading-tight">
                                 <span className="break-words">{loan.person_name}</span>
                                 {status.isDelayed && !isCompleted && (
-                                  <Badge variant="destructive" className="ml-2 inline-flex h-5 px-1.5 text-[10px] align-middle">Delayed</Badge>
+                                  <Badge variant="destructive" className="ml-2 inline-flex h-5 px-1.5 text-[10px] align-middle">
+                                    Delayed {status.daysDelayed > 0 && `(${status.daysDelayed}d)`}
+                                  </Badge>
                                 )}
                                 {isCompleted && (
                                   <Badge variant="default" className="ml-2 inline-flex bg-green-600 h-5 px-1.5 text-[10px] align-middle">Paid</Badge>
