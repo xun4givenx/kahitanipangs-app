@@ -61,9 +61,12 @@ export async function GET() {
   const monthlyIncome = transactions
     .filter((t) => t.type === "income")
     .reduce((s, t) => s + Number(t.amount), 0);
+  const monthlyReinvested = loans
+    .filter((l) => l.funding_source === 'reinvested' && l.start_date >= monthStart && l.start_date <= monthEnd)
+    .reduce((s, l) => s + Number(l.amount_released), 0);
   const monthlyExpenses = transactions
     .filter((t) => t.type === "expense")
-    .reduce((s, t) => s + Number(t.amount), 0);
+    .reduce((s, t) => s + Number(t.amount), 0) + monthlyReinvested;
   const totalDebt = debts.reduce((s, d) => s + Number(d.balance), 0);
   
   const totalLoansOut = loans.reduce((s, l) => s + Number(l.remaining_balance), 0);
