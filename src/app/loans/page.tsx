@@ -63,6 +63,8 @@ export default function LoansPage() {
   const [filter, setFilter] = useState<"all" | "active" | "delayed" | "completed">("active");
   const [searchQuery, setSearchQuery] = useState("");
 
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
   const filteredLoans = useMemo(() => {
     return loans.filter((l) => {
       const matchSearch = l.person_name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -112,6 +114,13 @@ export default function LoansPage() {
   function resetForm() {
     setForm(initialForm);
     setEditingId(null);
+    setIsFormOpen(false);
+  }
+
+  function openNewLoan() {
+    setForm(initialForm);
+    setEditingId(null);
+    setIsFormOpen(true);
   }
 
   const computedLoan = useMemo(() => {
@@ -177,6 +186,7 @@ export default function LoansPage() {
       advanced_interest: Boolean(loan.advanced_interest),
     });
     setEditingId(loan.id);
+    setIsFormOpen(true);
   }
 
   async function handleDelete(id: string) {
@@ -433,161 +443,26 @@ export default function LoansPage() {
         </div>
 
         <div className="space-y-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>{editingId ? "Edit borrower loan" : "New borrower loan"}</CardTitle>
-              <CardDescription>
-                Interest and payment amounts are calculated automatically as you type.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                  <div className="space-y-2 md:col-span-2">
-                    <Label>Borrower name</Label>
-                    <Input
-                      value={form.person_name}
-                      onChange={(e) => setForm({ ...form, person_name: e.target.value })}
-                      placeholder="Borrower name"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label>Principal amount</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={form.total_amount}
-                      onChange={(e) => setForm({ ...form, total_amount: e.target.value })}
-                      placeholder="Principal amount"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Interest rate (%)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={form.interest_rate}
-                      onChange={(e) => setForm({ ...form, interest_rate: e.target.value })}
-                      placeholder="Interest rate (%)"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Start date</Label>
-                    <Input
-                      type="date"
-                      value={form.start_date}
-                      onChange={(e) => setForm({ ...form, start_date: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Frequency</Label>
-                    <Select
-                      value={form.frequency}
-                      onValueChange={(v) => setForm({ ...form, frequency: v as LoanFrequency })}
-                    >
-                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {frequencyOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Number of installments</Label>
-                    <Input
-                      type="number"
-                      value={form.installments}
-                      onChange={(e) => setForm({ ...form, installments: e.target.value })}
-                      placeholder="Installments"
-                      required
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  <div className="space-y-2">
-                    <Label>Source of Funds</Label>
-                    <Select
-                      value={form.funding_source}
-                      onValueChange={(v) => setForm({ ...form, funding_source: v as "reinvested" | "fresh_capital" })}
-                    >
-                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="reinvested">Reinvested Proceeds</SelectItem>
-                        <SelectItem value="fresh_capital">Fresh Capital</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <label className="flex items-start gap-3 rounded-xl bg-muted/40 p-3 shadow-sm md:col-span-1 lg:col-span-2">
-                    <input
-                      type="checkbox"
-                      checked={form.advanced_interest}
-                      onChange={(e) => setForm({ ...form, advanced_interest: e.target.checked })}
-                      className="mt-1 h-4 w-4 rounded border-input accent-primary"
-                    />
-                    <div>
-                      <span className="text-sm font-medium text-foreground">Collect interest upfront</span>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {form.advanced_interest
-                          ? "Borrower receives principal minus interest. Installments are based on principal."
-                          : "Borrower receives full principal. Installments cover principal plus interest."}
-                      </p>
-                    </div>
-                  </label>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-xl bg-muted/40 p-4 text-center shadow-sm">
-                    <p className="text-[0.625rem] uppercase tracking-[0.2em] text-muted-foreground">Installment</p>
-                    <p className="mt-2 text-lg font-semibold text-foreground">{formatCurrency(computedLoan.repaymentAmount)}</p>
-                    <p className="mt-1 text-[0.7rem] text-muted-foreground">per payment</p>
-                  </div>
-                  <div className="rounded-xl bg-muted/40 p-4 text-center shadow-sm">
-                    <p className="text-[0.625rem] uppercase tracking-[0.2em] text-muted-foreground">Released amount</p>
-                    <p className="mt-2 text-lg font-semibold text-foreground">{formatCurrency(computedLoan.amountReleased)}</p>
-                    <p className="mt-1 text-[0.7rem] text-muted-foreground">cash to borrower</p>
-                  </div>
-                  <div className="rounded-xl bg-muted/40 p-4 text-center shadow-sm">
-                    <p className="text-[0.625rem] uppercase tracking-[0.2em] text-muted-foreground">Total due</p>
-                    <p className="mt-2 text-lg font-semibold text-foreground">{formatCurrency(computedLoan.remainingBalance)}</p>
-                    <p className="mt-1 text-[0.7rem] text-muted-foreground">principal + interest</p>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-2 pt-2 border-t border-border/40">
-                  <Button type="submit" disabled={saving}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    {editingId ? "Update loan" : "Add loan"}
-                  </Button>
-                  {editingId && (
-                    <Button type="button" variant="outline" onClick={resetForm}>
-                      Cancel
-                    </Button>
-                  )}
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h2 className="text-2xl font-bold tracking-tight">Existing borrowers</h2>
                 <p className="text-sm text-muted-foreground">{filteredLoans.length} loans shown</p>
               </div>
-              <div className="relative max-w-sm w-full">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search borrowers..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 w-full bg-muted/40"
-                />
+              <div className="flex flex-1 max-w-lg items-center gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search borrowers..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 w-full bg-muted/40"
+                  />
+                </div>
+                <Button onClick={openNewLoan}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Loan
+                </Button>
               </div>
             </div>
             
@@ -687,6 +562,145 @@ export default function LoansPage() {
           </div>
         </div>
       </div>
+
+      <Dialog open={isFormOpen} onOpenChange={(v) => { if (!v) resetForm(); }}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingId ? "Edit borrower loan" : "New borrower loan"}</DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              Interest and payment amounts are calculated automatically as you type.
+            </p>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-6 mt-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <div className="space-y-2 md:col-span-2">
+                <Label>Borrower name</Label>
+                <Input
+                  value={form.person_name}
+                  onChange={(e) => setForm({ ...form, person_name: e.target.value })}
+                  placeholder="Borrower name"
+                  required
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label>Principal amount</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={form.total_amount}
+                  onChange={(e) => setForm({ ...form, total_amount: e.target.value })}
+                  placeholder="Principal amount"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Interest rate (%)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={form.interest_rate}
+                  onChange={(e) => setForm({ ...form, interest_rate: e.target.value })}
+                  placeholder="Interest rate (%)"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Start date</Label>
+                <Input
+                  type="date"
+                  value={form.start_date}
+                  onChange={(e) => setForm({ ...form, start_date: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Frequency</Label>
+                <Select
+                  value={form.frequency}
+                  onValueChange={(v) => setForm({ ...form, frequency: v as LoanFrequency })}
+                >
+                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {frequencyOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Number of installments</Label>
+                <Input
+                  type="number"
+                  value={form.installments}
+                  onChange={(e) => setForm({ ...form, installments: e.target.value })}
+                  placeholder="Installments"
+                  required
+                />
+              </div>
+            </div>
+            
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="space-y-2">
+                <Label>Source of Funds</Label>
+                <Select
+                  value={form.funding_source}
+                  onValueChange={(v) => setForm({ ...form, funding_source: v as "reinvested" | "fresh_capital" })}
+                >
+                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="reinvested">Reinvested Proceeds</SelectItem>
+                    <SelectItem value="fresh_capital">Fresh Capital</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <label className="flex items-start gap-3 rounded-xl bg-muted/40 p-3 shadow-sm md:col-span-1 lg:col-span-2">
+                <input
+                  type="checkbox"
+                  checked={form.advanced_interest}
+                  onChange={(e) => setForm({ ...form, advanced_interest: e.target.checked })}
+                  className="mt-1 h-4 w-4 rounded border-input accent-primary"
+                />
+                <div>
+                  <span className="text-sm font-medium text-foreground">Collect interest upfront</span>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {form.advanced_interest
+                      ? "Borrower receives principal minus interest. Installments are based on principal."
+                      : "Borrower receives full principal. Installments cover principal plus interest."}
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-xl bg-muted/40 p-4 text-center shadow-sm">
+                <p className="text-[0.625rem] uppercase tracking-[0.2em] text-muted-foreground">Installment</p>
+                <p className="mt-2 text-lg font-semibold text-foreground">{formatCurrency(computedLoan.repaymentAmount)}</p>
+                <p className="mt-1 text-[0.7rem] text-muted-foreground">per payment</p>
+              </div>
+              <div className="rounded-xl bg-muted/40 p-4 text-center shadow-sm">
+                <p className="text-[0.625rem] uppercase tracking-[0.2em] text-muted-foreground">Released amount</p>
+                <p className="mt-2 text-lg font-semibold text-foreground">{formatCurrency(computedLoan.amountReleased)}</p>
+                <p className="mt-1 text-[0.7rem] text-muted-foreground">cash to borrower</p>
+              </div>
+              <div className="rounded-xl bg-muted/40 p-4 text-center shadow-sm">
+                <p className="text-[0.625rem] uppercase tracking-[0.2em] text-muted-foreground">Total due</p>
+                <p className="mt-2 text-lg font-semibold text-foreground">{formatCurrency(computedLoan.remainingBalance)}</p>
+                <p className="mt-1 text-[0.7rem] text-muted-foreground">principal + interest</p>
+              </div>
+            </div>
+
+            <DialogFooter className="pt-2 border-t border-border/40">
+              <Button type="button" variant="outline" onClick={resetForm}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={saving}>
+                <Plus className="mr-2 h-4 w-4" />
+                {editingId ? "Update loan" : "Add loan"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!refundLoan} onOpenChange={(v) => { if (!v) setRefundLoan(null); }}>
         <DialogContent>
