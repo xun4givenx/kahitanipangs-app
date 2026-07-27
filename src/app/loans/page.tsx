@@ -20,7 +20,7 @@ import { formatCurrency, formatDate, loanProfit, getLoanStatus, roundToTens } fr
 import type { Account, Loan, LoanCollection, LoanFrequency } from "@/types/database";
 import {
   Plus, Pencil, Trash2, HandCoins, Coins, Undo2, History, Receipt,
-  TrendingUp, Wallet,
+  TrendingUp, Wallet, Search,
 } from "lucide-react";
 
 const frequencyOptions: { value: LoanFrequency; label: string }[] = [
@@ -61,9 +61,13 @@ export default function LoansPage() {
   const [editCollectionForm, setEditCollectionForm] = useState({ amount: "", date: "", note: "" });
   const [editingCollection, setEditingCollection] = useState(false);
   const [filter, setFilter] = useState<"all" | "active" | "delayed" | "completed">("active");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const filteredLoans = useMemo(() => {
     return loans.filter((l) => {
+      const matchSearch = l.person_name.toLowerCase().includes(searchQuery.toLowerCase());
+      if (!matchSearch) return false;
+
       if (filter === "all") return true;
       if (filter === "completed") return Number(l.remaining_balance) <= 0;
       if (filter === "active") return Number(l.remaining_balance) > 0;
@@ -72,7 +76,7 @@ export default function LoansPage() {
       }
       return true;
     });
-  }, [loans, filter]);
+  }, [loans, filter, searchQuery]);
 
   async function load() {
     const res = await fetch("/api/loans");
@@ -571,18 +575,31 @@ export default function LoansPage() {
           </Card>
 
           <div className="space-y-4">
-            <div>
-              <h2 className="text-2xl font-bold tracking-tight">Existing borrowers</h2>
-              <p className="text-sm text-muted-foreground">{filteredLoans.length} loans shown</p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-bold tracking-tight">Existing borrowers</h2>
+                <p className="text-sm text-muted-foreground">{filteredLoans.length} loans shown</p>
+              </div>
+              <div className="relative max-w-sm w-full">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search borrowers..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 w-full bg-muted/40"
+                />
+              </div>
             </div>
             
-            <Tabs value={filter} onValueChange={(v) => setFilter(v as "all" | "active" | "delayed" | "completed")} className="w-full">
-              <TabsList className="mb-4">
-                <TabsTrigger value="all">All</TabsTrigger>
-                <TabsTrigger value="active">Active</TabsTrigger>
-                <TabsTrigger value="delayed">Delayed</TabsTrigger>
-                <TabsTrigger value="completed">Completed</TabsTrigger>
-              </TabsList>
+            <Tabs value={filter} onValueChange={(v) => setFilter(v as "all" | "active" | "delayed" | "completed")} className="w-full flex-col">
+              <div className="flex items-center justify-between gap-4 mb-4">
+                <TabsList>
+                  <TabsTrigger value="all">All</TabsTrigger>
+                  <TabsTrigger value="active">Active</TabsTrigger>
+                  <TabsTrigger value="delayed">Delayed</TabsTrigger>
+                  <TabsTrigger value="completed">Completed</TabsTrigger>
+                </TabsList>
+              </div>
 
               {filteredLoans.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed py-16 text-center">
