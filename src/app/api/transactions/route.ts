@@ -66,9 +66,7 @@ export async function POST(request: Request) {
 
     if (!result.ok) return jsonError(result.error, result.status ?? 500);
     linkedLoan = result.data.loan;
-  }
-
-  if (debt_id && type === "expense") {
+  } else if (debt_id && type === "expense") {
     const result = await applyDebtPayment(auth.supabase, auth.user.id, debt_id, {
       amount: Number(amount),
       paymentDate: transactionDate,
@@ -77,6 +75,26 @@ export async function POST(request: Request) {
 
     if (!result.ok) return jsonError(result.error, result.status ?? 500);
     linkedDebt = result.data.debt;
+
+    // Trigger GL Integration for Debt Payment
+    const { recordDebtPaymentGL } = await import("@/lib/server/gl-integration");
+    await recordDebtPaymentGL(auth.supabase, auth.user.id, {
+      paymentId: result.data.payment.id,
+      debtId: linkedDebt.id,
+      name: linkedDebt.name,
+      date: transactionDate,
+      amount: Number(amount),
+    });
+  } else {
+    // If it is just a generic transaction, trigger the generic GL integration
+    const { recordTransactionGL } = await import("@/lib/server/gl-integration");
+    await recordTransactionGL(auth.supabase, auth.user.id, {
+      transactionId: data.id,
+      type: type as "income" | "expense" | "transfer",
+      amount: Number(amount),
+      date: transactionDate,
+      description: description || "",
+    });
   }
 
   return jsonOk({ ...data, loan: linkedLoan, debt: linkedDebt }, 201);

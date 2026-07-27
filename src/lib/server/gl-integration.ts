@@ -175,3 +175,116 @@ export async function recordLoanCollectionGL(
     lines,
   });
 }
+
+export async function recordTransactionGL(
+  supabase: SupabaseClient,
+  userId: string,
+  params: {
+    transactionId: string;
+    type: "income" | "expense" | "transfer";
+    amount: number;
+    date: string;
+    description: string;
+  }
+) {
+  const bankAccountId = await resolveAccountByCode(supabase, userId, "1120"); // Using Bank Accounts as default cash proxy
+  const otherIncomeId = await resolveAccountByCode(supabase, userId, "4200");
+  const otherExpenseId = await resolveAccountByCode(supabase, userId, "5300");
+
+  if (!bankAccountId || !otherIncomeId || !otherExpenseId) {
+    console.error("Missing required GL accounts for generic transaction.");
+    return { ok: false, error: "Missing GL accounts." };
+  }
+
+  const lines = [];
+
+  if (params.type === "income") {
+    lines.push(
+      { ledger_account_id: bankAccountId, debit: params.amount, credit: 0, line_memo: params.description },
+      { ledger_account_id: otherIncomeId, debit: 0, credit: params.amount, line_memo: params.description }
+    );
+  } else if (params.type === "expense") {
+    lines.push(
+      { ledger_account_id: otherExpenseId, debit: params.amount, credit: 0, line_memo: params.description },
+      { ledger_account_id: bankAccountId, debit: 0, credit: params.amount, line_memo: params.description }
+    );
+  } else if (params.type === "transfer") {
+    // For transfer, we just do a dummy transfer in the same bank account since legacy didn't track destination GL well.
+    // In the future, we could map legacy source and destination to GL accounts.
+    lines.push(
+      { ledger_account_id: bankAccountId, debit: params.amount, credit: 0, line_memo: `Transfer In: ${params.description}` },
+      { ledger_account_id: bankAccountId, debit: 0, credit: params.amount, line_memo: `Transfer Out: ${params.description}` }
+    );
+  }
+
+  return await createJournalEntry(supabase, userId, {
+    entry_date: params.date,
+    memo: params.description || "Generic transaction",
+    reference: `txn_${params.transactionId}`,
+    status: "posted",
+    lines,
+  });
+}
+
+export async function recordDebtCreationGL(
+  supabase: SupabaseClient,
+  userId: string,
+  params: {
+    debtId: string;
+    name: string;
+    date: string;
+    amount: number;
+  }
+) {
+  // 1120 - Bank Accounts (assuming debt received in cash)
+  // 2130 - Debts Payable
+  const bankAccountId = await resolveAccountByCode(supabase, userId, "1120");
+  const debtsPayableId = await resolveAccountByCode(supabase, userId, "2130");
+
+  if (!bankAccountId || !debtsPayableId) {
+    return { ok: false, error: "Missing GL accounts." };
+  }
+
+  return await createJournalEntry(supabase, userId, {
+    entry_date: params.date,
+    memo: `Incurred debt: ${params.name}`,
+    reference: `debt_${params.debtId}`,
+    status: "posted",
+    lines: [
+      { ledger_account_id: bankAccountId, debit: params.amount, credit: 0, line_memo: "Cash received from debt" },
+      { ledger_account_id: debtsPayableId, debit: 0, credit: params.amount, line_memo: `Debt principal - ${params.name}` },
+    ],
+  });
+}
+
+export async function recordDebtPaymentGL(
+  supabase: SupabaseClient,
+  userId: string,
+  params: {
+    paymentId: string;
+    debtId: string;
+    name: string;
+    date: string;
+    amount: number;
+  }
+) {
+  // 1120 - Bank Accounts
+  // 2130 - Debts Payable
+  const bankAccountId = await resolveAccountByCode(supabase, userId, "1120");
+  const debtsPayableId = await resolveAccountByCode(supabase, userId, "2130");
+
+  if (!bankAccountId || !debtsPayableId) {
+    return { ok: false, error: "Missing GL accounts." };
+  }
+
+  return await createJournalEntry(supabase, userId, {
+    entry_date: params.date,
+    memo: `Payment for debt: ${params.name}`,
+    reference: `debtpay_${params.paymentId}`,
+    status: "posted",
+    lines: [
+      { ledger_account_id: debtsPayableId, debit: params.amount, credit: 0, line_memo: `Debt payment - ${params.name}` },
+      { ledger_account_id: bankAccountId, debit: 0, credit: params.amount, line_memo: "Cash disbursed for debt" },
+    ],
+  });
+}

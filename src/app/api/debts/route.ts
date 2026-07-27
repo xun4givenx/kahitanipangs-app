@@ -44,5 +44,15 @@ export async function POST(request: Request) {
     .single();
 
   if (error) return jsonError(error.message, 500);
+
+  // Trigger GL Integration
+  const { recordDebtCreationGL } = await import("@/lib/server/gl-integration");
+  await recordDebtCreationGL(auth.supabase, auth.user.id, {
+    debtId: data.id,
+    name: name,
+    date: new Date().toISOString().split("T")[0],
+    amount: Number(data.original_balance ?? balance),
+  });
+
   return jsonOk(data, 201);
 }
