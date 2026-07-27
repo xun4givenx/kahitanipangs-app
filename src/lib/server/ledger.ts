@@ -361,6 +361,12 @@ export async function deleteLoanCollection(
 
   if (txError) return { ok: false, error: txError.message };
 
+  // Delete the linked GL journal entry
+  await supabase
+    .from("journal_entries")
+    .delete()
+    .eq("reference", `col_${collectionId}`);
+
   const { remaining_balance, savings_balance } = collectionBalanceEffects(loan, existing, {
     action: "delete",
   });

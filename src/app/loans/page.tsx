@@ -91,10 +91,12 @@ export default function LoansPage() {
   }
 
   async function loadCashAccount() {
-    const res = await fetch("/api/accounts");
+    const res = await fetch("/api/gl/trial-balance");
     if (!res.ok) return;
-    const data: Account[] = await res.json();
-    setCashAccount(data.find((a) => a.name === "Cash on Collected Loans") || null);
+    const data = await res.json();
+    const rows: { name: string; balance: number }[] = data.rows || [];
+    const cashRow = rows.find((a) => a.name.toLowerCase().includes("cash on collected"));
+    setCashAccount(cashRow ? { name: cashRow.name, balance: cashRow.balance, id: "gl", type: "cash", user_id: "gl", currency: "PHP", is_active: true } as Account : null);
   }
 
   useEffect(() => { load(); loadCashAccount(); }, []);
