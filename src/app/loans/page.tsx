@@ -547,6 +547,18 @@ export default function LoansPage() {
                           <div className="grid grid-cols-2 gap-y-4 gap-x-4">
                             <div>
                               <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                                Start Date
+                              </p>
+                              <p className="font-medium mt-0.5">{loan.start_date ? formatDate(loan.start_date) : "N/A"}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                                Expected End
+                              </p>
+                              <p className="font-medium mt-0.5">{status.expectedEndDate ? formatDate(status.expectedEndDate) : "N/A"}</p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
                                 Principal
                               </p>
                               <p className="font-medium mt-0.5">{formatCurrency(loan.total_amount)}</p>

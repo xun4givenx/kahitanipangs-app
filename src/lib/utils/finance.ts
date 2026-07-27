@@ -194,6 +194,7 @@ export interface LoanStatus {
   actualTotal: number;
   delayedAmount: number;
   nextExpectedPaymentDate: string | null;
+  expectedEndDate: string | null;
   isAhead: boolean;
   daysAhead: number;
   advancedPayments: number;
@@ -202,7 +203,7 @@ export interface LoanStatus {
 
 export function getLoanStatus(loan: Loan): LoanStatus {
   if (!loan.start_date || loan.remaining_balance <= 0) {
-    return { isDelayed: false, daysDelayed: 0, missedPayments: 0, expectedTotal: 0, actualTotal: 0, delayedAmount: 0, nextExpectedPaymentDate: null, isAhead: false, daysAhead: 0, advancedPayments: 0, advancedAmount: 0 };
+    return { isDelayed: false, daysDelayed: 0, missedPayments: 0, expectedTotal: 0, actualTotal: 0, delayedAmount: 0, nextExpectedPaymentDate: null, expectedEndDate: null, isAhead: false, daysAhead: 0, advancedPayments: 0, advancedAmount: 0 };
   }
 
   const startDate = parseISO(loan.start_date);
@@ -229,6 +230,21 @@ export function getLoanStatus(loan: Loan): LoanStatus {
       }
     }
     nextExpectedPaymentDate = format(nextDate, "yyyy-MM-dd");
+  }
+
+  let expectedEndDate = null;
+  if (loan.installments > 0) {
+    let endDate = startDate;
+    for (let i = 1; i < loan.installments; i++) {
+      switch (loan.frequency) {
+        case "daily": endDate = addDays(endDate, 1); break;
+        case "weekly": endDate = addWeeks(endDate, 1); break;
+        case "biweekly": endDate = addWeeks(endDate, 2); break;
+        case "monthly": endDate = addMonths(endDate, 1); break;
+        default: endDate = addMonths(endDate, 1); break;
+      }
+    }
+    expectedEndDate = format(endDate, "yyyy-MM-dd");
   }
 
   let chronExpectedOccurrences = 0;
@@ -277,6 +293,7 @@ export function getLoanStatus(loan: Loan): LoanStatus {
     actualTotal,
     delayedAmount,
     nextExpectedPaymentDate,
+    expectedEndDate,
     isAhead: advancedAmount > 0,
     daysAhead,
     advancedPayments,
