@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { format } from "date-fns";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -20,8 +19,8 @@ import { toast } from "sonner";
 import { formatCurrency, formatDate, loanProfit, getLoanStatus } from "@/lib/utils/finance";
 import type { Account, Loan, LoanCollection, LoanFrequency } from "@/types/database";
 import {
-  Plus, Pencil, Trash2, HandCoins, Coins, Undo2, History, PiggyBank, Receipt,
-  TrendingUp, Wallet, Clock,
+  Plus, Pencil, Trash2, HandCoins, Coins, Undo2, History, Receipt,
+  TrendingUp, Wallet,
 } from "lucide-react";
 
 const frequencyOptions: { value: LoanFrequency; label: string }[] = [
@@ -30,22 +29,6 @@ const frequencyOptions: { value: LoanFrequency; label: string }[] = [
   { value: "biweekly", label: "Biweekly" },
   { value: "monthly", label: "Monthly" },
 ];
-
-
-
-
-function getNextPaymentDate(loan: Loan): string {
-  if (!loan.start_date) return "—";
-  const today = new Date();
-  const nextDate = new Date(loan.start_date);
-  for (let i = 0; i < 120 && nextDate < today; i += 1) {
-    if (loan.frequency === "daily") nextDate.setDate(nextDate.getDate() + 1);
-    else if (loan.frequency === "weekly") nextDate.setDate(nextDate.getDate() + 7);
-    else if (loan.frequency === "biweekly") nextDate.setDate(nextDate.getDate() + 14);
-    else nextDate.setMonth(nextDate.getMonth() + 1);
-  }
-  return format(nextDate, "MMM d, yyyy");
-}
 
 const initialForm = {
   person_name: "",
@@ -610,7 +593,6 @@ export default function LoansPage() {
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {filteredLoans.map((loan) => {
                     const { expected, realized } = loanProfit(loan);
-                    const progress = expected > 0 ? Math.min(100, (realized / expected) * 100) : 0;
                     const status = getLoanStatus(loan);
                     const isCompleted = Number(loan.remaining_balance) <= 0;
 
