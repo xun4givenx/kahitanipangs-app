@@ -22,11 +22,12 @@ const clamp0 = (n: number) => Math.max(0, n);
 export function collectionBalanceEffects(
   loan: { remaining_balance: number; savings_balance: number; total_amount: number },
   existing: { kind: LoanCollectionKind; installment_amount: number; savings_delta: number },
-  op: { action: "edit"; newSavingsDelta: number } | { action: "delete" }
+  op: { action: "edit"; newSavingsDelta: number; newInstallment?: number } | { action: "delete" }
 ): { remaining_balance: number; savings_balance: number } {
   if (op.action === "edit") {
+    const instDiff = (op.newInstallment ?? existing.installment_amount) - existing.installment_amount;
     return {
-      remaining_balance: loan.remaining_balance,
+      remaining_balance: Math.max(0, loan.remaining_balance - instDiff),
       savings_balance: clamp0(loan.savings_balance + (op.newSavingsDelta - existing.savings_delta)),
     };
   }
@@ -51,6 +52,7 @@ interface ApplyLoanCollectionParams {
   collectedAmount?: number | null;
   collectionDate?: string | null;
   note?: string | null;
+  applyExcessToPrincipal?: boolean;
 }
 
 interface ApplyLoanWithdrawalParams {
@@ -113,7 +115,7 @@ export async function applyLoanCollection(
   supabase: SupabaseClient,
   userId: string,
   loanId: string,
-  { collectedAmount, collectionDate, note }: ApplyLoanCollectionParams = {}
+  { collectedAmount, collectionDate, note, applyExcessToPrincipal }: ApplyLoanCollectionParams = {}
 ): Promise<LedgerResult<{ collection: LoanCollection; loan: Loan }>> {
   const { data: loan, error: loanError } = await supabase
     .from("loans")
@@ -123,12 +125,17 @@ export async function applyLoanCollection(
 
   if (loanError || !loan) return { ok: false, error: "Loan not found", status: 404 };
 
-  const installment = Number(loan.repayment_amount);
+  let installment = Number(loan.repayment_amount);
   const collected =
     collectedAmount !== undefined && collectedAmount !== null
       ? Number(collectedAmount)
       : roundToTens(installment);
-  const savingsDelta = collected - installment;
+  let savingsDelta = collected - installment;
+
+  if (applyExcessToPrincipal && savingsDelta > 0) {
+    installment = collected;
+    savingsDelta = 0;
+  }
 
   const { data: collection, error: insertError } = await supabase
     .from("loan_collections")
@@ -221,6 +228,7 @@ interface EditLoanCollectionParams {
   collectionDate?: string | null;
   collectedAmount?: number | null;
   note?: string | null;
+  applyExcessToPrincipal?: boolean;
 }
 
 /**
@@ -242,7 +250,7 @@ export async function editLoanCollection(
   userId: string,
   loanId: string,
   collectionId: string,
-  { collectionDate, collectedAmount, note }: EditLoanCollectionParams = {}
+  { collectionDate, collectedAmount, note, applyExcessToPrincipal }: EditLoanCollectionParams = {}
 ): Promise<LedgerResult<{ collection: LoanCollection; loan: Loan }>> {
   const { data: existing, error: existingError } = await supabase
     .from("loan_collections")
@@ -263,6 +271,7 @@ export async function editLoanCollection(
   if (loanError || !loan) return { ok: false, error: "Loan not found", status: 404 };
 
   const isCollection = existing.kind === "collection";
+  const standardInstallment = Number(loan.repayment_amount);
 
   // Derive the new amount + savings_delta for whichever kind this is.
   const newAmount =
@@ -272,13 +281,18 @@ export async function editLoanCollection(
         ? Number(existing.collected_amount)
         : -Number(existing.savings_delta); // withdrawal amount is stored as -savings_delta
 
-  const newSavingsDelta = isCollection
-    ? newAmount - Number(existing.installment_amount)
-    : -newAmount;
+  let newInstallment = isCollection ? standardInstallment : 0;
+  let newSavingsDelta = isCollection ? newAmount - standardInstallment : -newAmount;
 
-  const { savings_balance } = collectionBalanceEffects(loan, existing, {
+  if (isCollection && applyExcessToPrincipal && newAmount > standardInstallment) {
+    newInstallment = newAmount;
+    newSavingsDelta = 0;
+  }
+
+  const { remaining_balance, savings_balance } = collectionBalanceEffects(loan, existing, {
     action: "edit",
     newSavingsDelta,
+    newInstallment,
   });
 
   // Update the collection row.
@@ -287,6 +301,7 @@ export async function editLoanCollection(
     note: note !== undefined ? note : existing.note,
   };
   if (isCollection) {
+    collectionUpdate.installment_amount = newInstallment;
     collectionUpdate.collected_amount = newAmount;
     if (collectionDate) collectionUpdate.collection_date = collectionDate;
   }
@@ -300,10 +315,10 @@ export async function editLoanCollection(
 
   if (updateCollectionError) return { ok: false, error: updateCollectionError.message };
 
-  // Update the loan's savings balance (remaining is unchanged on edit).
+  // Update the loan's savings and remaining balance.
   const { data: updatedLoan, error: loanUpdateError } = await supabase
     .from("loans")
-    .update({ savings_balance })
+    .update({ savings_balance, remaining_balance })
     .eq("id", loanId)
     .select()
     .single();

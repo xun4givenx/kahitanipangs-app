@@ -38,6 +38,7 @@ export async function POST(
       collectedAmount: body.collected_amount,
       collectionDate: body.collection_date,
       note: body.note,
+      applyExcessToPrincipal: body.apply_excess_to_principal,
     });
 
     if (!result.ok) return jsonError(result.error, result.status ?? 500);
@@ -59,8 +60,16 @@ export async function POST(
     if (txError) return jsonError(txError.message, 500);
 
     // GL Integration
-    const principalPortion = loan.total_amount / loan.installments;
-    const interestPortion = loan.advanced_interest ? 0 : Number(loan.repayment_amount) - principalPortion;
+    const standardPrincipal = loan.total_amount / loan.installments;
+    const standardInterest = loan.advanced_interest ? 0 : Number(loan.repayment_amount) - standardPrincipal;
+    
+    // Scale by how many installments were actually paid (e.g. advanced payments)
+    const multiplier = Number(loan.repayment_amount) > 0 
+      ? Number(collection.installment_amount) / Number(loan.repayment_amount)
+      : 1;
+
+    const principalPortion = standardPrincipal * multiplier;
+    const interestPortion = standardInterest * multiplier;
 
     await recordLoanCollectionGL(auth.supabase, auth.user.id, {
       collectionId: collection.id,

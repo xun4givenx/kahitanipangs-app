@@ -54,11 +54,11 @@ export default function LoansPage() {
   const [historyRows, setHistoryRows] = useState<LoanCollection[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [collectLoan, setCollectLoan] = useState<Loan | null>(null);
-  const [collectForm, setCollectForm] = useState({ amount: "", date: new Date().toISOString().split("T")[0] });
+  const [collectForm, setCollectForm] = useState({ amount: "", date: new Date().toISOString().split("T")[0], applyExcess: false });
   const [collectingManual, setCollectingManual] = useState(false);
   const [cashAccount, setCashAccount] = useState<Account | null>(null);
   const [editCollection, setEditCollection] = useState<LoanCollection | null>(null);
-  const [editCollectionForm, setEditCollectionForm] = useState({ amount: "", date: "", note: "" });
+  const [editCollectionForm, setEditCollectionForm] = useState({ amount: "", date: "", note: "", applyExcess: false });
   const [editingCollection, setEditingCollection] = useState(false);
   const [filter, setFilter] = useState<"all" | "active" | "delayed" | "completed">("active");
   const [searchQuery, setSearchQuery] = useState("");
@@ -249,6 +249,7 @@ export default function LoansPage() {
     setCollectForm({
       amount: String(roundToTens(loan.repayment_amount || 0)),
       date: new Date().toISOString().split("T")[0],
+      applyExcess: false,
     });
   }
 
@@ -269,6 +270,7 @@ export default function LoansPage() {
         kind: "collection",
         collected_amount: amount,
         collection_date: collectForm.date,
+        apply_excess_to_principal: collectForm.applyExcess,
       }),
     });
     setCollectingManual(false);
@@ -343,6 +345,7 @@ export default function LoansPage() {
       amount: row.kind === "collection" ? String(row.collected_amount) : String(-row.savings_delta),
       date: row.collection_date,
       note: row.note || "",
+      applyExcess: row.kind === "collection" && Number(row.installment_amount) > Number(historyLoan?.repayment_amount || 0),
     });
   }
 
@@ -353,6 +356,7 @@ export default function LoansPage() {
     const body: Record<string, unknown> = {
       collected_amount: Number(editCollectionForm.amount),
       note: editCollectionForm.note,
+      apply_excess_to_principal: editCollectionForm.applyExcess,
     };
     if (editCollection.kind === "collection") body.collection_date = editCollectionForm.date;
     const res = await fetch(`/api/loans/${historyLoan.id}/collections/${editCollection.id}`, {
@@ -793,6 +797,15 @@ export default function LoansPage() {
                   required
                 />
               </div>
+              <label className="flex items-center gap-2 mt-2">
+                <input
+                  type="checkbox"
+                  checked={collectForm.applyExcess}
+                  onChange={(e) => setCollectForm({ ...collectForm, applyExcess: e.target.checked })}
+                  className="rounded border-input accent-primary h-4 w-4"
+                />
+                <span className="text-sm font-medium">Apply excess entirely to loan (do not save)</span>
+              </label>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setCollectLoan(null)}>
                   Cancel
@@ -887,14 +900,25 @@ export default function LoansPage() {
               />
             </div>
             {editCollection?.kind === "collection" && (
-              <div className="space-y-2">
-                <Label>Collection date</Label>
-                <Input
-                  type="date"
-                  value={editCollectionForm.date}
-                  onChange={(e) => setEditCollectionForm((f) => ({ ...f, date: e.target.value }))}
-                />
-              </div>
+              <>
+                <div className="space-y-2">
+                  <Label>Collection date</Label>
+                  <Input
+                    type="date"
+                    value={editCollectionForm.date}
+                    onChange={(e) => setEditCollectionForm((f) => ({ ...f, date: e.target.value }))}
+                  />
+                </div>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={editCollectionForm.applyExcess}
+                    onChange={(e) => setEditCollectionForm((f) => ({ ...f, applyExcess: e.target.checked }))}
+                    className="rounded border-input accent-primary h-4 w-4"
+                  />
+                  <span className="text-sm font-medium">Apply excess entirely to loan (do not save)</span>
+                </label>
+              </>
             )}
             <div className="space-y-2">
               <Label>Note</Label>

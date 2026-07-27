@@ -19,6 +19,7 @@ export async function PATCH(
       collectionDate: body.collection_date,
       collectedAmount: body.collected_amount,
       note: body.note,
+      applyExcessToPrincipal: body.apply_excess_to_principal,
     }
   );
 
