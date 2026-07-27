@@ -9,6 +9,12 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      data: {
+        active: 'state="active"',
+        inactive: 'state="inactive"',
+        horizontal: 'orientation="horizontal"',
+        vertical: 'orientation="vertical"',
+      },
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
