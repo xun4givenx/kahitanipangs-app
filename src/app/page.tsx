@@ -176,8 +176,8 @@ export default function DashboardPage() {
 
   const cashStats = [
     { label: "Cash on Hand", value: formatCurrency(data?.totalBalance || 0), icon: Wallet, color: "text-primary" },
-    { label: "Monthly Income", value: formatCurrency(data?.monthlyIncome || 0), icon: TrendingUp, color: "text-green-600" },
-    { label: "Monthly Expenses", value: formatCurrency(data?.monthlyExpenses || 0), icon: TrendingDown, color: "text-red-600" },
+    { label: "Cash In (Month)", value: formatCurrency(data?.monthlyIncome || 0), icon: TrendingUp, color: "text-green-600" },
+    { label: "Cash Out (Month)", value: formatCurrency(data?.monthlyExpenses || 0), icon: TrendingDown, color: "text-red-600" },
     { label: "Debt Payoff", value: formatCurrency(data?.totalDebt || 0), icon: CreditCard, color: "text-destructive" },
   ];
 
