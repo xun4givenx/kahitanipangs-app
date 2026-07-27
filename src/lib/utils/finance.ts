@@ -29,7 +29,13 @@ export function loanProfit(loan: LoanProfitInput): { expected: number; realized:
   const totalAmount = Number(loan.total_amount);
   const interest = (totalAmount * Number(loan.interest_rate)) / 100;
   const expected = interest;
-  const originalDue = loan.advanced_interest ? totalAmount : totalAmount + interest;
+  
+  if (loan.advanced_interest) {
+    // If interest was collected upfront, it is fully realized immediately.
+    return { expected, realized: expected };
+  }
+
+  const originalDue = totalAmount + interest;
   const recovered = originalDue - Number(loan.remaining_balance);
   const realized = Math.min(Math.max(recovered - Number(loan.amount_released), 0), expected);
 
