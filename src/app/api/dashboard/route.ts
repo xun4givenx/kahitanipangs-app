@@ -53,7 +53,11 @@ export async function GET() {
   const loans = loansRes.data || [];
   const collectionsToday = collectionsTodayRes.data || [];
 
-  const totalBalance = accounts.reduce((s, a) => s + Number(a.balance), 0);
+  const rawAccountBalance = accounts.reduce((s, a) => s + Number(a.balance), 0);
+  const totalReinvestedPrincipal = loans
+    .filter((l) => l.funding_source === 'reinvested')
+    .reduce((s, l) => s + Number(l.amount_released), 0);
+  const totalBalance = rawAccountBalance - totalReinvestedPrincipal;
   const monthlyIncome = transactions
     .filter((t) => t.type === "income")
     .reduce((s, t) => s + Number(t.amount), 0);
