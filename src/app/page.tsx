@@ -21,6 +21,7 @@ import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar, Cell, XAxis, YAxis,
   CartesianGrid, Tooltip, Legend,
 } from "recharts";
+import { roundToTens } from "@/lib/utils/finance";
 
 import {
   DndContext,
@@ -103,13 +104,14 @@ export default function DashboardPage() {
   }
 
   async function handleQuickCollect(loanId: string, amount: number) {
-    if (!confirm(`Collect ${formatCurrency(amount)} today?`)) return;
+    const roundedAmount = roundToTens(amount);
+    if (!confirm(`Collect ${formatCurrency(roundedAmount)} today?`)) return;
     await fetch(`/api/loans/${loanId}/collections`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         kind: "collection",
-        collected_amount: amount,
+        collected_amount: roundedAmount,
         collection_date: new Date().toISOString().split("T")[0],
       }),
     });
@@ -434,7 +436,7 @@ export default function DashboardPage() {
                         {c.isDelayed && <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">Delayed</Badge>}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        Amount due: {formatCurrency(c.repayment_amount)}
+                        Amount due: {formatCurrency(roundToTens(c.repayment_amount))}
                       </p>
                     </div>
                     <Button size="sm" onClick={() => handleQuickCollect(c.id, c.repayment_amount)}>

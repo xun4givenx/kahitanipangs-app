@@ -12,8 +12,8 @@ export function formatDate(date: string) {
   return format(parseISO(date), "MMM d, yyyy");
 }
 
-export function roundUpToTens(n: number): number {
-  return Math.ceil(n / 10) * 10;
+export function roundToTens(n: number): number {
+  return Math.round(n / 10) * 10;
 }
 
 type LoanProfitInput = Pick<
@@ -198,32 +198,46 @@ export function getLoanStatus(loan: Loan): LoanStatus {
   const startDate = parseISO(loan.start_date);
   const today = startOfDay(new Date());
 
-  let expectedOccurrences = 0;
-  let currentDate = startDate;
-
-  // Calculate occurrences due up to today
-  while (currentDate <= today && expectedOccurrences < loan.installments) {
-    expectedOccurrences++;
-    switch (loan.frequency) {
-      case "daily": currentDate = addDays(currentDate, 1); break;
-      case "weekly": currentDate = addWeeks(currentDate, 1); break;
-      case "biweekly": currentDate = addWeeks(currentDate, 2); break;
-      case "monthly": currentDate = addMonths(currentDate, 1); break;
-      default: currentDate = addMonths(currentDate, 1); break;
-    }
-  }
-
-  const nextExpectedPaymentDate = expectedOccurrences < loan.installments ? format(currentDate, "yyyy-MM-dd") : null;
-
   const totalAmount = Number(loan.total_amount);
   const interest = (totalAmount * Number(loan.interest_rate)) / 100;
   const originalDue = loan.advanced_interest ? totalAmount : totalAmount + interest;
   const actualTotal = originalDue - Number(loan.remaining_balance);
+  const installment = Number(loan.repayment_amount);
 
-  const expectedTotal = Math.min(expectedOccurrences * Number(loan.repayment_amount), originalDue);
+  const installmentsPaid = installment > 0 ? Math.floor(actualTotal / installment) : 0;
+  
+  let nextExpectedPaymentDate = null;
+  if (installmentsPaid < loan.installments) {
+    let nextDate = startDate;
+    for (let i = 0; i < installmentsPaid; i++) {
+      switch (loan.frequency) {
+        case "daily": nextDate = addDays(nextDate, 1); break;
+        case "weekly": nextDate = addWeeks(nextDate, 1); break;
+        case "biweekly": nextDate = addWeeks(nextDate, 2); break;
+        case "monthly": nextDate = addMonths(nextDate, 1); break;
+        default: nextDate = addMonths(nextDate, 1); break;
+      }
+    }
+    nextExpectedPaymentDate = format(nextDate, "yyyy-MM-dd");
+  }
+
+  let chronExpectedOccurrences = 0;
+  let chronDate = startDate;
+  while (chronDate <= today && chronExpectedOccurrences < loan.installments) {
+    chronExpectedOccurrences++;
+    switch (loan.frequency) {
+      case "daily": chronDate = addDays(chronDate, 1); break;
+      case "weekly": chronDate = addWeeks(chronDate, 1); break;
+      case "biweekly": chronDate = addWeeks(chronDate, 2); break;
+      case "monthly": chronDate = addMonths(chronDate, 1); break;
+      default: chronDate = addMonths(chronDate, 1); break;
+    }
+  }
+
+  const expectedTotal = Math.min(chronExpectedOccurrences * installment, originalDue);
   const delayedAmount = Math.max(0, expectedTotal - actualTotal);
   
-  const missedPayments = delayedAmount > 0 ? Math.ceil(delayedAmount / Number(loan.repayment_amount)) : 0;
+  const missedPayments = delayedAmount > 0 && installment > 0 ? Math.ceil(delayedAmount / installment) : 0;
   
   let daysDelayed = 0;
   if (missedPayments > 0) {

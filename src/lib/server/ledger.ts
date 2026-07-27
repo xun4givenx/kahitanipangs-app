@@ -1,5 +1,5 @@
 import type { createClient } from "@/lib/supabase/server";
-import { roundUpToTens } from "@/lib/utils/finance";
+import { roundToTens } from "@/lib/utils/finance";
 import type { Debt, DebtPayment, Loan, LoanCollection, LoanCollectionKind } from "@/types/database";
 
 const clamp0 = (n: number) => Math.max(0, n);
@@ -127,7 +127,7 @@ export async function applyLoanCollection(
   const collected =
     collectedAmount !== undefined && collectedAmount !== null
       ? Number(collectedAmount)
-      : roundUpToTens(installment);
+      : roundToTens(installment);
   const savingsDelta = collected - installment;
 
   const { data: collection, error: insertError } = await supabase

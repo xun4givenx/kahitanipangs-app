@@ -16,7 +16,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { formatCurrency, formatDate, loanProfit, getLoanStatus } from "@/lib/utils/finance";
+import { formatCurrency, formatDate, loanProfit, getLoanStatus, roundToTens } from "@/lib/utils/finance";
 import type { Account, Loan, LoanCollection, LoanFrequency } from "@/types/database";
 import {
   Plus, Pencil, Trash2, HandCoins, Coins, Undo2, History, Receipt,
@@ -215,7 +215,7 @@ export default function LoansPage() {
   function openManualCollect(loan: Loan) {
     setCollectLoan(loan);
     setCollectForm({
-      amount: String(loan.repayment_amount || 0),
+      amount: String(roundToTens(loan.repayment_amount || 0)),
       date: new Date().toISOString().split("T")[0],
     });
   }
