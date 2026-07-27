@@ -522,6 +522,11 @@ export default function LoansPage() {
                                     Delayed {status.daysDelayed > 0 && `(${status.daysDelayed}d)`}
                                   </Badge>
                                 )}
+                                {status.isAhead && !isCompleted && status.daysAhead > 0 && (
+                                  <Badge variant="default" className="ml-2 inline-flex bg-emerald-500 hover:bg-emerald-600 h-5 px-1.5 text-[10px] align-middle">
+                                    Ahead ({status.daysAhead}d)
+                                  </Badge>
+                                )}
                                 {isCompleted && (
                                   <Badge variant="default" className="ml-2 inline-flex bg-green-600 h-5 px-1.5 text-[10px] align-middle">Paid</Badge>
                                 )}

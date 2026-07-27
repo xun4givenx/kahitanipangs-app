@@ -194,11 +194,15 @@ export interface LoanStatus {
   actualTotal: number;
   delayedAmount: number;
   nextExpectedPaymentDate: string | null;
+  isAhead: boolean;
+  daysAhead: number;
+  advancedPayments: number;
+  advancedAmount: number;
 }
 
 export function getLoanStatus(loan: Loan): LoanStatus {
   if (!loan.start_date || loan.remaining_balance <= 0) {
-    return { isDelayed: false, daysDelayed: 0, missedPayments: 0, expectedTotal: 0, actualTotal: 0, delayedAmount: 0, nextExpectedPaymentDate: null };
+    return { isDelayed: false, daysDelayed: 0, missedPayments: 0, expectedTotal: 0, actualTotal: 0, delayedAmount: 0, nextExpectedPaymentDate: null, isAhead: false, daysAhead: 0, advancedPayments: 0, advancedAmount: 0 };
   }
 
   const startDate = parseISO(loan.start_date);
@@ -242,8 +246,10 @@ export function getLoanStatus(loan: Loan): LoanStatus {
 
   const expectedTotal = Math.min(chronExpectedOccurrences * installment, originalDue);
   const delayedAmount = Math.max(0, expectedTotal - actualTotal);
+  const advancedAmount = Math.max(0, actualTotal - expectedTotal);
   
   const missedPayments = delayedAmount > 0 && installment > 0 ? Math.ceil(delayedAmount / installment) : 0;
+  const advancedPayments = advancedAmount > 0 && installment > 0 ? Math.floor(advancedAmount / installment) : 0;
   
   let daysDelayed = 0;
   if (missedPayments > 0) {
@@ -254,6 +260,15 @@ export function getLoanStatus(loan: Loan): LoanStatus {
     else if (loan.frequency === "yearly") daysDelayed = missedPayments * 365;
   }
 
+  let daysAhead = 0;
+  if (advancedPayments > 0) {
+    if (loan.frequency === "daily") daysAhead = advancedPayments * 1;
+    else if (loan.frequency === "weekly") daysAhead = advancedPayments * 7;
+    else if (loan.frequency === "biweekly") daysAhead = advancedPayments * 14;
+    else if (loan.frequency === "monthly") daysAhead = advancedPayments * 30;
+    else if (loan.frequency === "yearly") daysAhead = advancedPayments * 365;
+  }
+
   return {
     isDelayed: delayedAmount > 0,
     daysDelayed,
@@ -261,6 +276,10 @@ export function getLoanStatus(loan: Loan): LoanStatus {
     expectedTotal,
     actualTotal,
     delayedAmount,
-    nextExpectedPaymentDate
+    nextExpectedPaymentDate,
+    isAhead: advancedAmount > 0,
+    daysAhead,
+    advancedPayments,
+    advancedAmount
   };
 }
