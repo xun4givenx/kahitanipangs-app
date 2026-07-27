@@ -3,16 +3,29 @@ import { createJournalEntry } from "@/lib/server/ledger-gl";
 
 type SupabaseClient = ReturnType<typeof createClient>;
 
-/** Resolves an account ID by its preset code (e.g., '1140'). */
-async function resolveAccountByCode(supabase: SupabaseClient, userId: string, code: string): Promise<string | null> {
+/** Resolves an account ID by its preset code or name fallback. */
+async function resolveSystemAccount(supabase: SupabaseClient, userId: string, code: string, nameFallback: string): Promise<string | null> {
+  // 1. Try to find an active account by exact code
   const { data } = await supabase
     .from("ledger_accounts")
     .select("id")
     .eq("user_id", userId)
-    .eq("book", "personal") // We'll default to personal book for loans, or we could look up both. Let's strictly use 'personal' for standard consumer loans.
+    .eq("is_active", true)
     .eq("code", code)
-    .single();
-  return data?.id ?? null;
+    .limit(1);
+    
+  if (data && data.length > 0) return data[0].id;
+
+  // 2. If code changed, try to find an active account by name
+  const { data: nameData } = await supabase
+    .from("ledger_accounts")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("is_active", true)
+    .ilike("name", nameFallback)
+    .limit(1);
+
+  return nameData?.[0]?.id ?? null;
 }
 
 export async function recordLoanDisbursementGL(
@@ -32,11 +45,12 @@ export async function recordLoanDisbursementGL(
   // 1150 - Cash on Collected Loans (If reinvested)
   // 3200 - Owner's Contributions (If fresh capital)
   // 4120 - Interest Income (if advanced interest)
-  const loansReceivableId = await resolveAccountByCode(supabase, userId, "1140");
-  const interestIncomeId = await resolveAccountByCode(supabase, userId, "4120");
+  const loansReceivableId = await resolveSystemAccount(supabase, userId, "1140", "%Loans Receivable%");
+  const interestIncomeId = await resolveSystemAccount(supabase, userId, "4120", "%Interest Income%");
   
   const sourceCode = params.fundingSource === "fresh_capital" ? "3200" : "1150";
-  const sourceAccountId = await resolveAccountByCode(supabase, userId, sourceCode);
+  const sourceName = params.fundingSource === "fresh_capital" ? "%Owner's Contributions%" : "%Cash on Collected%";
+  const sourceAccountId = await resolveSystemAccount(supabase, userId, sourceCode, sourceName);
 
   if (!loansReceivableId || !sourceAccountId || !interestIncomeId) {
     console.error("Missing required GL accounts for loan disbursement.");
@@ -98,10 +112,10 @@ export async function recordLoanCollectionGL(
   // 1140 - Loans Receivable
   // 4120 - Interest Income
   // 2140 - Borrower Savings Payable
-  const cashAccountId = await resolveAccountByCode(supabase, userId, "1150");
-  const loansReceivableId = await resolveAccountByCode(supabase, userId, "1140");
-  const interestIncomeId = await resolveAccountByCode(supabase, userId, "4120");
-  const savingsPayableId = await resolveAccountByCode(supabase, userId, "2140");
+  const cashAccountId = await resolveSystemAccount(supabase, userId, "1150", "%Cash on Collected%");
+  const loansReceivableId = await resolveSystemAccount(supabase, userId, "1140", "%Loans Receivable%");
+  const interestIncomeId = await resolveSystemAccount(supabase, userId, "4120", "%Interest Income%");
+  const savingsPayableId = await resolveSystemAccount(supabase, userId, "2140", "%Borrower Savings Payable%");
 
   if (!cashAccountId || !loansReceivableId || !interestIncomeId || !savingsPayableId) {
     console.error("Missing required GL accounts for loan collection.");
@@ -187,9 +201,10 @@ export async function recordTransactionGL(
     description: string;
   }
 ) {
-  const bankAccountId = await resolveAccountByCode(supabase, userId, "1120"); // Using Bank Accounts as default cash proxy
-  const otherIncomeId = await resolveAccountByCode(supabase, userId, "4200");
-  const otherExpenseId = await resolveAccountByCode(supabase, userId, "5300");
+  // For generic transactions, default to cash/bank and income/expense accounts
+  const bankAccountId = await resolveSystemAccount(supabase, userId, "1120", "%Bank Accounts%"); // Or Cash
+  const otherIncomeId = await resolveSystemAccount(supabase, userId, "4200", "%Other Income%");
+  const otherExpenseId = await resolveSystemAccount(supabase, userId, "5300", "%Other Expenses%");
 
   if (!bankAccountId || !otherIncomeId || !otherExpenseId) {
     console.error("Missing required GL accounts for generic transaction.");
@@ -238,8 +253,8 @@ export async function recordDebtCreationGL(
 ) {
   // 1120 - Bank Accounts (assuming debt received in cash)
   // 2130 - Debts Payable
-  const bankAccountId = await resolveAccountByCode(supabase, userId, "1120");
-  const debtsPayableId = await resolveAccountByCode(supabase, userId, "2130");
+  const bankAccountId = await resolveSystemAccount(supabase, userId, "1120", "%Bank Accounts%");
+  const debtsPayableId = await resolveSystemAccount(supabase, userId, "2130", "%Debts Payable%");
 
   if (!bankAccountId || !debtsPayableId) {
     return { ok: false, error: "Missing GL accounts." };
@@ -270,8 +285,8 @@ export async function recordDebtPaymentGL(
 ) {
   // 1120 - Bank Accounts
   // 2130 - Debts Payable
-  const bankAccountId = await resolveAccountByCode(supabase, userId, "1120");
-  const debtsPayableId = await resolveAccountByCode(supabase, userId, "2130");
+  const bankAccountId = await resolveSystemAccount(supabase, userId, "1120", "%Bank Accounts%");
+  const debtsPayableId = await resolveSystemAccount(supabase, userId, "2130", "%Debts Payable%");
 
   if (!bankAccountId || !debtsPayableId) {
     return { ok: false, error: "Missing GL accounts." };
