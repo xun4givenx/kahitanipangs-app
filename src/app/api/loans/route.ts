@@ -1,5 +1,6 @@
 import { getAuthUser, jsonError, jsonOk } from "@/lib/api-helpers";
-import { recordLoanDisbursementGL } from "@/lib/server/gl-integration";
+import { recordLoanDisbursementGL, recordTransactionGL } from "@/lib/server/gl-integration";
+import { ensureCashCollectionsAccount } from "@/lib/server/ledger";
 
 export async function GET() {
   const auth = await getAuthUser();
@@ -29,6 +30,7 @@ export async function POST(request: Request) {
     repayment_amount,
     remaining_balance,
     advanced_interest,
+    pocketed_interest,
     amount_released,
     funding_source,
   } = body;
@@ -69,6 +71,34 @@ export async function POST(request: Request) {
     advancedInterestAmount: data.advanced_interest ? interestTotal : 0,
     fundingSource: data.funding_source,
   });
+
+  // Log pocketed interest if requested
+  if (data.advanced_interest && pocketed_interest) {
+    const advancedInterestAmount = data.total_amount - data.amount_released;
+    if (advancedInterestAmount > 0) {
+      const cashAccountId = await ensureCashCollectionsAccount(auth.supabase, auth.user.id);
+      
+      const { data: tx, error: txError } = await auth.supabase.from("transactions").insert({
+        user_id: auth.user.id,
+        account_id: cashAccountId,
+        amount: advancedInterestAmount,
+        type: "expense",
+        description: `Personal Payable (Pocketed Interest) - ${data.person_name}`,
+        date: data.start_date,
+        loan_id: data.id,
+      }).select().single();
+
+      if (!txError && tx) {
+        await recordTransactionGL(auth.supabase, auth.user.id, {
+          transactionId: tx.id,
+          type: "expense",
+          amount: advancedInterestAmount,
+          date: data.start_date,
+          description: `Personal Payable (Pocketed Interest) - ${data.person_name}`,
+        });
+      }
+    }
+  }
 
   return jsonOk(data, 201);
 }

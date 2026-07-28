@@ -39,6 +39,7 @@ const initialForm = {
   funding_source: "reinvested" as "reinvested" | "fresh_capital",
   installments: "",
   advanced_interest: false,
+  pocketed_interest: false,
 };
 
 export default function LoansPage() {
@@ -169,6 +170,7 @@ export default function LoansPage() {
       repayment_amount: Number(computedLoan.repaymentAmount.toFixed(2)),
       remaining_balance: Number(finalRemainingBalance.toFixed(2)),
       advanced_interest: form.advanced_interest,
+      pocketed_interest: form.pocketed_interest,
       amount_released: Number(computedLoan.amountReleased.toFixed(2)),
     };
 
@@ -202,6 +204,7 @@ export default function LoansPage() {
       funding_source: loan.funding_source || "reinvested",
       installments: loan.installments?.toString() || "",
       advanced_interest: Boolean(loan.advanced_interest),
+      pocketed_interest: false,
     });
     setEditingId(loan.id);
     setIsFormOpen(true);
@@ -714,22 +717,41 @@ export default function LoansPage() {
                 </Select>
               </div>
               
-              <label className="flex items-start gap-3 rounded-xl bg-muted/40 p-3 shadow-sm md:col-span-1 lg:col-span-2">
-                <input
-                  type="checkbox"
-                  checked={form.advanced_interest}
-                  onChange={(e) => setForm({ ...form, advanced_interest: e.target.checked })}
-                  className="mt-1 h-4 w-4 rounded border-input accent-primary"
-                />
-                <div>
-                  <span className="text-sm font-medium text-foreground">Collect interest upfront</span>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {form.advanced_interest
-                      ? "Borrower receives principal minus interest. Installments are based on principal."
-                      : "Borrower receives full principal. Installments cover principal plus interest."}
-                  </p>
-                </div>
-              </label>
+              <div className="flex flex-col gap-3 md:col-span-1 lg:col-span-2">
+                <label className="flex items-start gap-3 rounded-xl bg-muted/40 p-3 shadow-sm">
+                  <input
+                    type="checkbox"
+                    checked={form.advanced_interest}
+                    onChange={(e) => setForm({ ...form, advanced_interest: e.target.checked, pocketed_interest: e.target.checked ? form.pocketed_interest : false })}
+                    className="mt-1 h-4 w-4 rounded border-input accent-primary"
+                  />
+                  <div>
+                    <span className="text-sm font-medium text-foreground">Collect interest upfront</span>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {form.advanced_interest
+                        ? "Borrower receives principal minus interest. Installments are based on principal."
+                        : "Borrower receives full principal. Installments cover principal plus interest."}
+                    </p>
+                  </div>
+                </label>
+
+                {form.advanced_interest && !editingId && (
+                  <label className="flex items-start gap-3 rounded-xl bg-primary/10 border border-primary/20 p-3 shadow-sm ml-6">
+                    <input
+                      type="checkbox"
+                      checked={form.pocketed_interest}
+                      onChange={(e) => setForm({ ...form, pocketed_interest: e.target.checked })}
+                      className="mt-1 h-4 w-4 rounded border-input accent-primary"
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-primary">Log as Personal Payable</span>
+                      <p className="text-xs text-primary/80 mt-0.5">
+                        Automatically deducts the upfront interest from your Cash on Hand (since you pocketed it).
+                      </p>
+                    </div>
+                  </label>
+                )}
+              </div>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">
