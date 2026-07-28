@@ -26,22 +26,6 @@ export function getManilaToday() {
   return `${y}-${m}-${d}`;
 }
 
-export function getManilaTomorrow() {
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone: "Asia/Manila",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-  const parts = formatter.formatToParts(tomorrow);
-  const y = parts.find(p => p.type === "year")?.value;
-  const m = parts.find(p => p.type === "month")?.value;
-  const d = parts.find(p => p.type === "day")?.value;
-  return `${y}-${m}-${d}`;
-}
-
 export function roundToTens(n: number): number {
   return Math.round(n / 10) * 10;
 }
@@ -247,47 +231,42 @@ export function getLoanStatus(loan: Loan): LoanStatus {
 
   const installmentsPaid = installment > 0 ? Math.floor(actualTotal / installment) : 0;
   
+  const advanceDate = (date: Date, freq: string) => {
+    switch (freq) {
+      case "daily": return addDays(date, 1);
+      case "weekly": return addWeeks(date, 1);
+      case "biweekly": return addWeeks(date, 2);
+      case "monthly": return addMonths(date, 1);
+      case "yearly": return addYears(date, 1);
+      default: return addMonths(date, 1);
+    }
+  };
+
+  const firstPaymentDate = advanceDate(startDate, loan.frequency);
+
   let nextExpectedPaymentDate = null;
   if (installmentsPaid < loan.installments) {
-    let nextDate = startDate;
+    let nextDate = firstPaymentDate;
     for (let i = 0; i < installmentsPaid; i++) {
-      switch (loan.frequency) {
-        case "daily": nextDate = addDays(nextDate, 1); break;
-        case "weekly": nextDate = addWeeks(nextDate, 1); break;
-        case "biweekly": nextDate = addWeeks(nextDate, 2); break;
-        case "monthly": nextDate = addMonths(nextDate, 1); break;
-        default: nextDate = addMonths(nextDate, 1); break;
-      }
+      nextDate = advanceDate(nextDate, loan.frequency);
     }
     nextExpectedPaymentDate = format(nextDate, "yyyy-MM-dd");
   }
 
   let expectedEndDate = null;
   if (loan.installments > 0) {
-    let endDate = startDate;
+    let endDate = firstPaymentDate;
     for (let i = 1; i < loan.installments; i++) {
-      switch (loan.frequency) {
-        case "daily": endDate = addDays(endDate, 1); break;
-        case "weekly": endDate = addWeeks(endDate, 1); break;
-        case "biweekly": endDate = addWeeks(endDate, 2); break;
-        case "monthly": endDate = addMonths(endDate, 1); break;
-        default: endDate = addMonths(endDate, 1); break;
-      }
+      endDate = advanceDate(endDate, loan.frequency);
     }
     expectedEndDate = format(endDate, "yyyy-MM-dd");
   }
 
   let chronExpectedOccurrences = 0;
-  let chronDate = startDate;
+  let chronDate = firstPaymentDate;
   while (chronDate <= today && chronExpectedOccurrences < loan.installments) {
     chronExpectedOccurrences++;
-    switch (loan.frequency) {
-      case "daily": chronDate = addDays(chronDate, 1); break;
-      case "weekly": chronDate = addWeeks(chronDate, 1); break;
-      case "biweekly": chronDate = addWeeks(chronDate, 2); break;
-      case "monthly": chronDate = addMonths(chronDate, 1); break;
-      default: chronDate = addMonths(chronDate, 1); break;
-    }
+    chronDate = advanceDate(chronDate, loan.frequency);
   }
 
   const expectedTotal = Math.min(chronExpectedOccurrences * installment, originalDue);

@@ -16,7 +16,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { formatCurrency, formatDate, loanProfit, getLoanStatus, roundToTens, getManilaToday, getManilaTomorrow } from "@/lib/utils/finance";
+import { formatCurrency, formatDate, loanProfit, getLoanStatus, roundToTens, getManilaToday } from "@/lib/utils/finance";
 import type { Account, Loan, LoanCollection, LoanFrequency } from "@/types/database";
 import {
   Plus, Pencil, Trash2, HandCoins, Coins, Undo2, History, Receipt,
@@ -34,7 +34,7 @@ const initialForm = {
   person_name: "",
   total_amount: "",
   interest_rate: "",
-  start_date: getManilaTomorrow(),
+  start_date: getManilaToday(),
   frequency: "monthly" as LoanFrequency,
   funding_source: "reinvested" as "reinvested" | "fresh_capital",
   installments: "",
