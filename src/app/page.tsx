@@ -65,8 +65,8 @@ interface DashboardData {
   totalExpectedProfit: number;
   totalRealizedProfit: number;
   expectedDailyCollections: number;
-  dailyCollectibles: { id: string; person_name: string; repayment_amount: number; isDelayed: boolean }[];
-  delayedPayments: { id: string; person_name: string; daysDelayed: number; delayedAmount: number; repayment_amount: number }[];
+  dailyCollectibles: { id: string; person_name: string; repayment_amount: number; isDelayed: boolean; nextExpectedPaymentDate: string | null }[];
+  delayedPayments: { id: string; person_name: string; daysDelayed: number; delayedAmount: number; repayment_amount: number; nextExpectedPaymentDate: string | null }[];
   categorySpending: CategorySpending[];
   monthlySeries: MonthlyPoint[];
   recentTransactions: Transaction[];
@@ -104,16 +104,16 @@ export default function DashboardPage() {
       .finally(() => setLoading(false));
   }
 
-  async function handleQuickCollect(loanId: string, amount: number) {
+  async function handleQuickCollect(loanId: string, amount: number, collectionDate?: string) {
     const roundedAmount = roundToTens(amount);
-    if (!confirm(`Collect ${formatCurrency(roundedAmount)} today?`)) return;
+    if (!confirm(`Collect ${formatCurrency(roundedAmount)} for ${collectionDate ? formatDate(collectionDate) : 'today'}?`)) return;
     await fetch(`/api/loans/${loanId}/collections`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         kind: "collection",
         collected_amount: roundedAmount,
-        collection_date: new Date().toISOString().split("T")[0],
+        collection_date: collectionDate || new Date().toISOString().split("T")[0],
       }),
     });
     loadDashboard();
@@ -423,7 +423,7 @@ export default function DashboardPage() {
                         Amount due: {formatCurrency(roundToTens(c.repayment_amount))}
                       </p>
                     </div>
-                    <Button size="sm" onClick={() => handleQuickCollect(c.id, c.repayment_amount)}>
+                    <Button size="sm" onClick={() => handleQuickCollect(c.id, c.repayment_amount, c.nextExpectedPaymentDate || undefined)}>
                       Collect
                     </Button>
                   </div>

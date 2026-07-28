@@ -17,6 +17,7 @@ export async function GET(
     .from("loan_collections")
     .select("*")
     .eq("loan_id", params.id)
+    .order("collection_date", { ascending: false })
     .order("created_at", { ascending: false });
 
   if (error) return jsonError(error.message, 500);

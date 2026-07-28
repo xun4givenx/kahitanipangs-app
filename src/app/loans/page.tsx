@@ -224,11 +224,20 @@ export default function LoansPage() {
   }
 
   async function handleCollect(loan: Loan) {
+    const status = getLoanStatus(loan);
+    const defaultDate = (status.isDelayed && status.nextExpectedPaymentDate) 
+      ? status.nextExpectedPaymentDate 
+      : new Date().toISOString().split("T")[0];
+
     setCollectingId(loan.id);
     const res = await fetch(`/api/loans/${loan.id}/collections`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ kind: "collection" }),
+      body: JSON.stringify({ 
+        kind: "collection",
+        collected_amount: roundToTens(loan.repayment_amount || 0),
+        collection_date: defaultDate
+      }),
     });
     setCollectingId(null);
 
@@ -245,10 +254,15 @@ export default function LoansPage() {
   }
 
   function openManualCollect(loan: Loan) {
+    const status = getLoanStatus(loan);
+    const defaultDate = (status.isDelayed && status.nextExpectedPaymentDate) 
+      ? status.nextExpectedPaymentDate 
+      : new Date().toISOString().split("T")[0];
+
     setCollectLoan(loan);
     setCollectForm({
       amount: String(roundToTens(loan.repayment_amount || 0)),
-      date: new Date().toISOString().split("T")[0],
+      date: defaultDate,
       applyExcess: false,
     });
   }

@@ -96,7 +96,8 @@ export async function GET() {
         person_name: loan.person_name,
         daysDelayed: status.daysDelayed,
         delayedAmount: status.delayedAmount,
-        repayment_amount: loan.repayment_amount
+        repayment_amount: loan.repayment_amount,
+        nextExpectedPaymentDate: status.nextExpectedPaymentDate
       });
     }
 
@@ -106,7 +107,8 @@ export async function GET() {
           id: loan.id,
           person_name: loan.person_name,
           repayment_amount: loan.repayment_amount,
-          isDelayed: status.isDelayed
+          isDelayed: status.isDelayed,
+          nextExpectedPaymentDate: status.nextExpectedPaymentDate
         });
       }
     }
