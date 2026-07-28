@@ -1,5 +1,6 @@
 "use client";
 
+import { getManilaToday } from "@/lib/utils/finance";
 import { useState } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
@@ -21,7 +22,7 @@ interface AddSalaryDialogProps {
 const initialForm = {
   account_id: "",
   amount: "",
-  date: new Date().toISOString().split("T")[0],
+  date: getManilaToday(),
   note: "",
 };
 

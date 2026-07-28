@@ -1,5 +1,5 @@
 import type { createClient } from "@/lib/supabase/server";
-import { roundToTens } from "@/lib/utils/finance";
+import { getManilaToday,  roundToTens  } from "@/lib/utils/finance";
 import type { Debt, DebtPayment, Loan, LoanCollection, LoanCollectionKind } from "@/types/database";
 
 const clamp0 = (n: number) => Math.max(0, n);
@@ -433,7 +433,7 @@ export async function applyDebtPayment(
       user_id: userId,
       debt_id: debtId,
       amount,
-      payment_date: paymentDate || new Date().toISOString().split("T")[0],
+      payment_date: paymentDate || getManilaToday(),
       notes: notes ?? null,
     })
     .select("*, debts(name)")

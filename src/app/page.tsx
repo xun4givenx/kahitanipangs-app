@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { formatCurrency, formatDate } from "@/lib/utils/finance";
+import { getManilaToday,  formatCurrency, formatDate  } from "@/lib/utils/finance";
 import type { Transaction, ScheduledTransaction, Account } from "@/types/database";
 import { AddSalaryDialog } from "@/components/add-salary-dialog";
 import {
@@ -113,7 +113,7 @@ export default function DashboardPage() {
       body: JSON.stringify({
         kind: "collection",
         collected_amount: roundedAmount,
-        collection_date: collectionDate || new Date().toISOString().split("T")[0],
+        collection_date: collectionDate || getManilaToday(),
       }),
     });
     loadDashboard();

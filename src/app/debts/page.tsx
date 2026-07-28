@@ -18,7 +18,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { formatCurrency } from "@/lib/utils/finance";
+import { getManilaToday,  formatCurrency  } from "@/lib/utils/finance";
 import type { Debt, DebtPlan, DebtPayment } from "@/types/database";
 import { Plus, Trash2, Pencil, Sparkles, DollarSign, CreditCard as CreditCardIcon, Receipt } from "lucide-react";
 
@@ -35,7 +35,7 @@ export default function DebtsPage() {
     minimum_payment: "0", due_day: "", notes: "",
   });
   const [paymentForm, setPaymentForm] = useState({
-    debt_id: "", amount: "", payment_date: new Date().toISOString().split("T")[0], notes: "",
+    debt_id: "", amount: "", payment_date: getManilaToday(), notes: "",
   });
   const [planForm, setPlanForm] = useState({ strategy: "avalanche", monthly_budget: "" });
 

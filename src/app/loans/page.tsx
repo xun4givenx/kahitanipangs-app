@@ -16,7 +16,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { formatCurrency, formatDate, loanProfit, getLoanStatus, roundToTens } from "@/lib/utils/finance";
+import { getManilaToday,  formatCurrency, formatDate, loanProfit, getLoanStatus, roundToTens  } from "@/lib/utils/finance";
 import type { Account, Loan, LoanCollection, LoanFrequency } from "@/types/database";
 import {
   Plus, Pencil, Trash2, HandCoins, Coins, Undo2, History, Receipt,
@@ -34,7 +34,7 @@ const initialForm = {
   person_name: "",
   total_amount: "",
   interest_rate: "",
-  start_date: new Date().toISOString().split("T")[0],
+  start_date: getManilaToday(),
   frequency: "monthly" as LoanFrequency,
   funding_source: "reinvested" as "reinvested" | "fresh_capital",
   installments: "",
@@ -54,7 +54,7 @@ export default function LoansPage() {
   const [historyRows, setHistoryRows] = useState<LoanCollection[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [collectLoan, setCollectLoan] = useState<Loan | null>(null);
-  const [collectForm, setCollectForm] = useState({ amount: "", date: new Date().toISOString().split("T")[0], applyExcess: false });
+  const [collectForm, setCollectForm] = useState({ amount: "", date: getManilaToday(), applyExcess: false });
   const [collectingManual, setCollectingManual] = useState(false);
   const [cashAccount, setCashAccount] = useState<Account | null>(null);
   const [editCollection, setEditCollection] = useState<LoanCollection | null>(null);
@@ -227,7 +227,7 @@ export default function LoansPage() {
     const status = getLoanStatus(loan);
     const defaultDate = (status.isDelayed && status.nextExpectedPaymentDate) 
       ? status.nextExpectedPaymentDate 
-      : new Date().toISOString().split("T")[0];
+      : getManilaToday();
 
     setCollectingId(loan.id);
     const res = await fetch(`/api/loans/${loan.id}/collections`, {
@@ -257,7 +257,7 @@ export default function LoansPage() {
     const status = getLoanStatus(loan);
     const defaultDate = (status.isDelayed && status.nextExpectedPaymentDate) 
       ? status.nextExpectedPaymentDate 
-      : new Date().toISOString().split("T")[0];
+      : getManilaToday();
 
     setCollectLoan(loan);
     setCollectForm({

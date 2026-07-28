@@ -19,7 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { formatCurrency, formatDate, FREQUENCIES } from "@/lib/utils/finance";
+import { getManilaToday,  formatCurrency, formatDate, FREQUENCIES  } from "@/lib/utils/finance";
 import type { Transaction, Account, Category, ScheduledTransaction, Loan, Debt } from "@/types/database";
 import { Plus, Copy, Trash2, Pencil, Repeat, Receipt } from "lucide-react";
 
@@ -38,13 +38,13 @@ export default function TransactionsPage() {
   const [linkType, setLinkType] = useState<LinkType>("none");
   const [form, setForm] = useState({
     account_id: "", category_id: "", amount: "", type: "expense",
-    description: "", notes: "", date: new Date().toISOString().split("T")[0],
+    description: "", notes: "", date: getManilaToday(),
     loan_id: "", debt_id: "",
   });
   const [recurringForm, setRecurringForm] = useState({
     account_id: "", category_id: "", amount: "", type: "expense",
     description: "", frequency: "monthly",
-    start_date: new Date().toISOString().split("T")[0], end_date: "",
+    start_date: getManilaToday(), end_date: "",
   });
 
   async function load() {
@@ -112,7 +112,7 @@ export default function TransactionsPage() {
   function resetForm() {
     setForm({
       account_id: "", category_id: "", amount: "", type: "expense",
-      description: "", notes: "", date: new Date().toISOString().split("T")[0],
+      description: "", notes: "", date: getManilaToday(),
       loan_id: "", debt_id: "",
     });
     setLinkType("none");

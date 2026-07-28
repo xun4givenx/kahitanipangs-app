@@ -1,3 +1,4 @@
+import { getManilaToday } from "@/lib/utils/finance";
 import { getAuthUser, jsonError, jsonOk } from "@/lib/api-helpers";
 
 export async function GET() {
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
   await recordDebtCreationGL(auth.supabase, auth.user.id, {
     debtId: data.id,
     name: name,
-    date: new Date().toISOString().split("T")[0],
+    date: getManilaToday(),
     amount: Number(data.original_balance ?? balance),
   });
 

@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatCurrency } from "@/lib/utils/finance";
+import { getManilaToday,  formatCurrency  } from "@/lib/utils/finance";
 import { sumDebits, sumCredits, isBalanced, type JournalLineInput } from "@/lib/ledger-math";
 import type { LedgerAccount, JournalEntryWithLines } from "@/types/database";
 
@@ -43,7 +43,7 @@ export function JournalEntryEditor({ entry }: { entry?: JournalEntryWithLines })
   const router = useRouter();
   const [accounts, setAccounts] = useState<LedgerAccount[]>([]);
   const [entryDate, setEntryDate] = useState(
-    entry?.entry_date ?? new Date().toISOString().split("T")[0]
+    entry?.entry_date ?? getManilaToday()
   );
   const [memo, setMemo] = useState(entry?.memo ?? "");
   const [reference, setReference] = useState(entry?.reference ?? "");

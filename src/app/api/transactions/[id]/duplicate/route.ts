@@ -1,3 +1,4 @@
+import { getManilaToday } from "@/lib/utils/finance";
 import { getAuthUser, jsonError, jsonOk } from "@/lib/api-helpers";
 
 export async function POST(
@@ -25,7 +26,7 @@ export async function POST(
       type: original.type,
       description: `${original.description} (copy)`,
       notes: original.notes,
-      date: new Date().toISOString().split("T")[0],
+      date: getManilaToday(),
     })
     .select("*, accounts(name), categories(name)")
     .single();

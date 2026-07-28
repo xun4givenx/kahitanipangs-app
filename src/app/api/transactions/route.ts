@@ -1,3 +1,4 @@
+import { getManilaToday } from "@/lib/utils/finance";
 import { getAuthUser, jsonError, jsonOk } from "@/lib/api-helpers";
 import { applyDebtPayment, applyLoanCollection } from "@/lib/server/ledger";
 
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
     return jsonError("Account, amount, and type are required");
   }
 
-  const transactionDate = date || new Date().toISOString().split("T")[0];
+  const transactionDate = date || getManilaToday();
 
   const { data, error } = await auth.supabase
     .from("transactions")

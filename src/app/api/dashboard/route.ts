@@ -1,13 +1,14 @@
 import { getAuthUser, jsonError, jsonOk } from "@/lib/api-helpers";
-import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
-import { loanProfit, getLoanStatus } from "@/lib/utils/finance";
+import { format, startOfMonth, endOfMonth, subMonths, parseISO } from "date-fns";
+import { loanProfit, getLoanStatus, getManilaToday } from "@/lib/utils/finance";
 
 export async function GET() {
   const auth = await getAuthUser();
   if (!auth) return jsonError("Unauthorized", 401);
 
-  const now = new Date();
-  const today = format(now, "yyyy-MM-dd");
+  const manilaDateString = getManilaToday();
+  const now = parseISO(manilaDateString);
+  const today = manilaDateString;
   const monthStart = format(startOfMonth(now), "yyyy-MM-dd");
   const monthEnd = format(endOfMonth(now), "yyyy-MM-dd");
   const seriesStart = format(startOfMonth(subMonths(now, 5)), "yyyy-MM-dd");

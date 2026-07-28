@@ -1,3 +1,4 @@
+import { getManilaToday } from "@/lib/utils/finance";
 import { getAuthUser, jsonError, jsonOk } from "@/lib/api-helpers";
 import {
   applyLoanCollection,
@@ -96,7 +97,7 @@ export async function POST(
 
   const { collection, loan } = result.data;
   const cashAccountId = await ensureCashCollectionsAccount(auth.supabase, auth.user.id);
-  const withdrawalDate = new Date().toISOString().split("T")[0];
+  const withdrawalDate = getManilaToday();
 
   const { error: txError } = await auth.supabase.from("transactions").insert({
     user_id: auth.user.id,

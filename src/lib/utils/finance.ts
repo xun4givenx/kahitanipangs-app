@@ -12,6 +12,20 @@ export function formatDate(date: string) {
   return format(parseISO(date), "MMM d, yyyy");
 }
 
+export function getManilaToday() {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const parts = formatter.formatToParts(new Date());
+  const y = parts.find(p => p.type === "year")?.value;
+  const m = parts.find(p => p.type === "month")?.value;
+  const d = parts.find(p => p.type === "day")?.value;
+  return `${y}-${m}-${d}`;
+}
+
 export function roundToTens(n: number): number {
   return Math.round(n / 10) * 10;
 }

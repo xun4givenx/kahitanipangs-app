@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Bell } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { navGroups } from "@/components/layout/nav-items";
+import { ManilaClock } from "@/components/layout/manila-clock";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -32,6 +33,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <h1 className="text-xl font-bold tracking-tight">{currentPage}</h1>
           </div>
           <div className="flex items-center gap-4">
+            <ManilaClock />
             <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
               <Bell className="h-5 w-5" />
             </Button>
