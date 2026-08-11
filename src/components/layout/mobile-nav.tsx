@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { HeartHandshake, Menu } from "lucide-react";
+import Image from "next/image";
+import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -34,7 +35,7 @@ export function MobileNav() {
         </SheetContent>
       </Sheet>
       <Link href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight">
-        <span className="grid h-8 w-8 place-items-center rounded-xl bg-primary text-primary-foreground"><HeartHandshake className="h-4 w-4" /></span>
+        <Image src="/kp-wallet.svg" alt="" width={32} height={32} className="h-8 w-8 rounded-full" priority />
         KahitaNiPangs
       </Link>
     </header>

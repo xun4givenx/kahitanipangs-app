@@ -1,0 +1,13 @@
+{
+  "name": "KahitaNiPangs — Cash Book",
+  "short_name": "KahitaNiPangs",
+  "description": "A simple Philippine peso cash book for cash in, cash out, and budgets.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6fbf7",
+  "theme_color": "#116842",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/kp-wallet.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
+import { PwaRegister } from "@/components/pwa-register";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -16,8 +17,14 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "KahitaNiPangs | Shared money made simple",
-  description: "A thoughtful Philippine peso money manager for couples.",
+  title: "KahitaNiPangs | Cash Book",
+  description: "A simple Philippine peso cash book for cash in, cash out, and budgets.",
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [{ url: "/kp-wallet.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/kp-wallet.svg", type: "image/svg+xml" }],
+  },
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "KahitaNiPangs" },
 };
 
 export const viewport: Viewport = {
@@ -37,7 +44,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <ThemeProvider defaultTheme="light" enableSystem={false}>{children}</ThemeProvider>
+        <ThemeProvider defaultTheme="light" enableSystem={false}><PwaRegister />{children}</ThemeProvider>
       </body>
     </html>
   );

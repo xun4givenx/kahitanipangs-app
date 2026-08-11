@@ -1,0 +1,10 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="256" cy="256" r="226" fill="#112C2B"/>
+  <circle cx="256" cy="256" r="220" stroke="#7FC9C3" stroke-width="7"/>
+  <circle cx="256" cy="256" r="208" stroke="#E8C276" stroke-width="3"/>
+  <circle cx="256" cy="256" r="193" fill="#071E1D"/>
+  <rect x="108" y="172" width="296" height="184" rx="30" stroke="#EAF8F1" stroke-width="13"/>
+  <path d="M122 215H390" stroke="#EAF8F1" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="350" cy="264" r="18" fill="#6FD5B2"/>
+  <text x="176" y="325" fill="#EAF8F1" font-family="Arial, Helvetica, sans-serif" font-size="88" font-weight="800" letter-spacing="-10">KP</text>
+</svg>
