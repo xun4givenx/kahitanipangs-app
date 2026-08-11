@@ -16,8 +16,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "KahitaNiPangs",
-  description: "Personal Money Tracker",
+  title: "KahitaNiPangs | Shared money made simple",
+  description: "A thoughtful Philippine peso money manager for couples.",
 };
 
 export const viewport: Viewport = {
@@ -37,7 +37,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider defaultTheme="light" enableSystem={false}>{children}</ThemeProvider>
       </body>
     </html>
   );

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Menu } from "lucide-react";
+import { HeartHandshake, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -17,7 +17,7 @@ export function MobileNav() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 flex h-14 items-center gap-2 border-b border-border/40 bg-card px-4 lg:hidden">
+    <header className="sticky top-0 z-40 flex h-16 items-center gap-2 border-b border-border/70 bg-card/95 px-4 backdrop-blur lg:hidden">
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon" aria-label="Open menu">
@@ -33,7 +33,8 @@ export function MobileNav() {
           <NavContent onNavigate={() => setOpen(false)} />
         </SheetContent>
       </Sheet>
-      <Link href="/" className="text-lg font-bold tracking-tight">
+      <Link href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight">
+        <span className="grid h-8 w-8 place-items-center rounded-xl bg-primary text-primary-foreground"><HeartHandshake className="h-4 w-4" /></span>
         KahitaNiPangs
       </Link>
     </header>

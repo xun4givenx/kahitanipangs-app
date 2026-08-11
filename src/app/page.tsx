@@ -1,42 +1,36 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
-import { AppShell } from "@/components/layout/app-shell";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
-import { formatCurrency, formatDate  } from "@/lib/utils/finance";
-import type { Transaction, ScheduledTransaction, Account } from "@/types/database";
-import { AddSalaryDialog } from "@/components/add-salary-dialog";
-import {
-  Wallet, TrendingUp, TrendingDown, Calendar,
-  Receipt, PieChart as PieChartIcon,
+  ArrowDownRight,
+  ArrowUpRight,
+  ChevronRight,
+  CircleDollarSign,
+  Heart,
+  LayoutList,
+  Plus,
+  ReceiptText,
+  Sparkles,
+  TrendingUp,
+  UsersRound,
+  WalletCards,
 } from "lucide-react";
 import {
-  ResponsiveContainer, AreaChart, Area, BarChart, Bar, Cell, XAxis, YAxis,
-  CartesianGrid, Tooltip, Legend,
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
 } from "recharts";
 
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { SortableSection } from "@/components/dashboard/sortable-section";
+import { AddSalaryDialog } from "@/components/add-salary-dialog";
+import { AppShell } from "@/components/layout/app-shell";
+import { Button } from "@/components/ui/button";
+import { formatCurrency, formatDate } from "@/lib/utils/finance";
+import type { Account, ScheduledTransaction, Transaction } from "@/types/database";
 
 interface CategorySpending {
   name: string;
@@ -61,396 +55,179 @@ interface DashboardData {
   accounts: Account[];
 }
 
-const CHART_COLORS = [
-  "var(--chart-1)",
-  "var(--chart-2)",
-  "var(--chart-3)",
-  "var(--chart-4)",
-  "var(--chart-5)",
-];
+const expenseColors = ["#156f4a", "#2da66a", "#77c896", "#b8e1c5"];
 
-const tooltipStyle = {
-  background: "var(--popover)",
-  border: "1px solid var(--border)",
-  borderRadius: "var(--radius)",
-  color: "var(--popover-foreground)",
+const chartTooltip = {
+  background: "#ffffff",
+  border: "1px solid #dceee3",
+  borderRadius: "14px",
+  color: "#173d2c",
+  boxShadow: "0 14px 40px rgba(21, 111, 74, 0.12)",
   fontSize: 12,
 };
 
-const DEFAULT_ORDER = ["cash", "charts", "activity", "accounts"];
+function getInitials(label: string) {
+  return label
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join("")
+    .toUpperCase();
+}
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [sectionOrder, setSectionOrder] = useState<string[]>([]);
 
   function loadDashboard() {
+    setLoading(true);
     return fetch("/api/dashboard")
-      .then((r) => r.json())
+      .then((response) => response.json())
       .then(setData)
       .finally(() => setLoading(false));
   }
 
   useEffect(() => {
     loadDashboard();
-    
-    // Load drag-and-drop order
-    const saved = localStorage.getItem("dashboard-order");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        // Reset if it's the old layout format
-        if (!parsed.includes("cash")) {
-          setSectionOrder(DEFAULT_ORDER);
-          localStorage.removeItem("dashboard-order");
-        } else {
-          setSectionOrder(parsed);
-        }
-      } catch {
-        setSectionOrder(DEFAULT_ORDER);
-      }
-    } else {
-      setSectionOrder(DEFAULT_ORDER);
-    }
   }, []);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+  const topSpending = useMemo(
+    () => (data?.categorySpending || []).slice(0, 4),
+    [data?.categorySpending]
   );
-
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    
-    if (over && active.id !== over.id) {
-      setSectionOrder((items) => {
-        const oldIndex = items.indexOf(active.id as string);
-        const newIndex = items.indexOf(over.id as string);
-        
-        const newOrder = arrayMove(items, oldIndex, newIndex);
-        localStorage.setItem("dashboard-order", JSON.stringify(newOrder));
-        return newOrder;
-      });
-    }
-  }
+  const monthExpenses = data?.monthlyExpenses || 0;
+  const equalShare = monthExpenses / 2;
+  const topCategory = topSpending[0];
+  const hasChartData = (data?.monthlySeries || []).some(
+    (month) => month.income > 0 || month.expense > 0
+  );
 
   if (loading) {
     return (
       <AppShell>
-        <div className="flex h-64 items-center justify-center text-muted-foreground">
-          Loading dashboard...
+        <div className="dashboard-loading" aria-label="Loading dashboard">
+          <div className="loading-orbit" />
+          <p>Preparing your shared money view…</p>
         </div>
       </AppShell>
     );
   }
 
-  const cashStats = [
-    { label: "Cash on Hand", value: formatCurrency(data?.totalBalance || 0), icon: Wallet, color: "text-primary" },
-    { label: "Cash In (Month)", value: formatCurrency(data?.monthlyIncome || 0), icon: TrendingUp, color: "text-green-600" },
-    { label: "Cash Out (Month)", value: formatCurrency(data?.monthlyExpenses || 0), icon: TrendingDown, color: "text-red-600" },
-  ];
-
-  const categorySpending = data?.categorySpending || [];
-  const monthlySeries = data?.monthlySeries || [];
-  const hasCategoryData = categorySpending.length > 0;
-  const hasSeriesData = monthlySeries.some((m) => m.income > 0 || m.expense > 0);
-
-  const sectionsContent: Record<string, React.ReactNode> = {
-    cash: (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {cashStats.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={stat.label} className="border-border/60 shadow-none hover:bg-secondary/20 transition-colors">
-              <CardContent className="p-5">
-                <div className="flex items-center gap-2 mb-3">
-                  <Icon className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{stat.label}</span>
-                </div>
-                <div className="text-3xl font-bold tracking-tight">{stat.value}</div>
-                <div className={`text-xs mt-2 font-medium ${stat.color}`}>Updated just now</div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-    ),
-    charts: (
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Income vs Expenses</CardTitle>
-            <CardDescription>Last 6 months</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {hasSeriesData ? (
-              <ResponsiveContainer width="100%" height={260}>
-                <AreaChart data={monthlySeries} margin={{ left: 4, right: 12, top: 4 }}>
-                  <defs>
-                    <linearGradient id="incomeFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="var(--chart-5)" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="var(--chart-5)" stopOpacity={0.02} />
-                    </linearGradient>
-                    <linearGradient id="expenseFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="var(--destructive)" stopOpacity={0.3} />
-                      <stop offset="100%" stopColor="var(--destructive)" stopOpacity={0.02} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                  <XAxis
-                    dataKey="month"
-                    tickLine={false}
-                    axisLine={false}
-                    tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
-                  />
-                  <YAxis
-                    tickLine={false}
-                    axisLine={false}
-                    width={56}
-                    tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
-                    tickFormatter={(v: number) => formatCurrency(v).replace(/\.00$/, "")}
-                  />
-                  <Tooltip
-                    contentStyle={tooltipStyle}
-                    formatter={(value: number) => formatCurrency(value)}
-                  />
-                  <Legend
-                    formatter={(value) => (
-                      <span className="text-xs text-muted-foreground">{value}</span>
-                    )}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="income"
-                    name="Income"
-                    stroke="var(--chart-5)"
-                    fill="url(#incomeFill)"
-                    strokeWidth={2}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="expense"
-                    name="Expenses"
-                    stroke="var(--destructive)"
-                    fill="url(#expenseFill)"
-                    strokeWidth={2}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
-                <TrendingUp className="h-10 w-10 text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground">
-                  No income or expenses in the last 6 months yet.
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Spending by Category</CardTitle>
-            <CardDescription>This month&apos;s expenses</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {hasCategoryData ? (
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart
-                  data={categorySpending}
-                  layout="vertical"
-                  margin={{ left: 4, right: 16, top: 4 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
-                  <XAxis
-                    type="number"
-                    tickLine={false}
-                    axisLine={false}
-                    tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
-                    tickFormatter={(v: number) => formatCurrency(v).replace(/\.00$/, "")}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="name"
-                    tickLine={false}
-                    axisLine={false}
-                    width={100}
-                    tick={{ fill: "var(--muted-foreground)", fontSize: 12 }}
-                  />
-                  <Tooltip
-                    contentStyle={tooltipStyle}
-                    formatter={(value: number) => formatCurrency(value)}
-                  />
-                  <Bar dataKey="amount" radius={[0, 4, 4, 0]} maxBarSize={22}>
-                    {categorySpending.map((entry, i) => (
-                      <Cell
-                        key={entry.name}
-                        fill={entry.color || CHART_COLORS[i % CHART_COLORS.length]}
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
-                <PieChartIcon className="h-10 w-10 text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground">
-                  No expenses logged this month yet.
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    ),
-
-    activity: (
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Transactions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {data?.recentTransactions?.length ? (
-              <div className="w-full overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.recentTransactions.map((t) => (
-                    <TableRow key={t.id}>
-                      <TableCell className="text-muted-foreground">
-                        {formatDate(t.date)}
-                      </TableCell>
-                      <TableCell>{t.description}</TableCell>
-                      <TableCell className={`text-right font-medium ${t.type === "income" ? "text-green-600" : "text-red-600"}`}>
-                        {t.type === "income" ? "+" : "-"}
-                        {formatCurrency(t.amount)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
-                <Receipt className="h-10 w-10 text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground">
-                  No transactions yet — add your first one to get started.
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            <CardTitle>Upcoming Payments</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            {data?.upcomingPayments?.length ? (
-              <div className="divide-y divide-border/40">
-                {data.upcomingPayments.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors">
-                    <div>
-                      <p className="font-medium text-[15px]">{p.description}</p>
-                      <p className="text-sm text-muted-foreground mt-0.5">
-                        {formatDate(p.next_occurrence)} · {p.frequency}
-                      </p>
-                    </div>
-                    <Badge variant={p.type === "income" ? "default" : "destructive"} className="rounded-md px-2 py-1">
-                      {p.type === "income" ? "+" : "-"}
-                      {formatCurrency(p.amount)}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
-                <Calendar className="h-10 w-10 text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground">
-                  Nothing scheduled — set up a recurring payment to plan ahead.
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    ),
-    accounts: (
-      <Card>
-        <CardHeader>
-          <CardTitle>Account Balances</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {data?.accounts?.length ? (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {data.accounts.map((a) => (
-                <div
-                  key={a.id}
-                  className="flex items-center justify-between rounded-xl border-l-4 bg-muted/40 p-4"
-                  style={{ borderLeftColor: a.color }}
-                >
-                  <div>
-                    <p className="font-medium">{a.name}</p>
-                    <p className="text-sm capitalize text-muted-foreground">{a.type}</p>
-                  </div>
-                  <p className="text-lg font-bold">{formatCurrency(a.balance)}</p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
-              <Wallet className="h-10 w-10 text-muted-foreground/40" />
-              <p className="text-sm text-muted-foreground">
-                No accounts yet — add one to start tracking your balances.
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    )
-  };
-
   return (
     <AppShell>
-      <div className="space-y-6 relative">
-        <div className="flex justify-end relative z-50">
-          <AddSalaryDialog onSuccess={loadDashboard} />
-        </div>
-        
-        {sectionOrder.length > 0 ? (
-          <DndContext 
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext 
-              items={sectionOrder}
-              strategy={verticalListSortingStrategy}
-            >
-              {sectionOrder.map(id => (
-                sectionsContent[id] ? (
-                  <SortableSection key={id} id={id}>
-                    {sectionsContent[id]}
-                  </SortableSection>
-                ) : null
-              ))}
-            </SortableContext>
-          </DndContext>
-        ) : (
-          <div className="h-96 flex items-center justify-center text-muted-foreground animate-pulse">
-            Loading layout...
+      <div className="couples-dashboard">
+        <section className="dashboard-welcome">
+          <div>
+            <div className="eyebrow"><Heart className="h-3.5 w-3.5 fill-current" /> Shared money, made simple</div>
+            <h2>Good morning, <span>team.</span></h2>
+            <p>See what&apos;s coming in, going out, and how to share it with ease.</p>
           </div>
-        )}
+          <div className="dashboard-actions">
+            <Button asChild variant="outline" className="soft-button">
+              <Link href="/transactions"><Plus className="h-4 w-4" /> Add expense</Link>
+            </Button>
+            <AddSalaryDialog onSuccess={loadDashboard} />
+          </div>
+        </section>
+
+        <section className="balance-hero">
+          <div className="hero-orbit orbit-one" />
+          <div className="hero-orbit orbit-two" />
+          <div className="hero-orbit orbit-three" />
+          <div className="hero-main">
+            <div className="hero-label"><WalletCards className="h-4 w-4" /> Your shared balance</div>
+            <p className="balance-value">{formatCurrency(data?.totalBalance || 0)}</p>
+            <div className="income-pill"><ArrowUpRight className="h-4 w-4" /> {formatCurrency(data?.monthlyIncome || 0)} in this month</div>
+          </div>
+          <div className="hero-aside">
+            <div className="couple-avatars" aria-label="Your shared wallet">
+              <span className="avatar-person avatar-one">Y</span>
+              <span className="avatar-person avatar-two">P</span>
+              <span className="avatar-plus">+</span>
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/60">Couple&apos;s wallet</p>
+              <p className="mt-1 text-sm font-medium text-white">Together in the green</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="quick-stats">
+          <div className="stat-card">
+            <span className="stat-icon green"><ArrowUpRight className="h-5 w-5" /></span>
+            <div><p>Money in</p><strong>{formatCurrency(data?.monthlyIncome || 0)}</strong><small>This month</small></div>
+          </div>
+          <div className="stat-card">
+            <span className="stat-icon peach"><ArrowDownRight className="h-5 w-5" /></span>
+            <div><p>Money out</p><strong>{formatCurrency(monthExpenses)}</strong><small>This month</small></div>
+          </div>
+          <div className="stat-card">
+            <span className="stat-icon mint"><CircleDollarSign className="h-5 w-5" /></span>
+            <div><p>Left to enjoy</p><strong>{formatCurrency(Math.max((data?.monthlyIncome || 0) - monthExpenses, 0))}</strong><small>After spending</small></div>
+          </div>
+        </section>
+
+        <section className="dashboard-grid">
+          <article className="panel shared-panel">
+            <div className="panel-heading">
+              <div><p className="section-kicker">COUPLE&apos;S PLAN</p><h3>Split it fairly</h3></div>
+              <span className="equal-split"><UsersRound className="h-4 w-4" /> Equal split</span>
+            </div>
+            <p className="panel-subtitle">Based on this month&apos;s expenses, here&apos;s a simple 50/50 view for the two of you.</p>
+            <div className="split-content">
+              <div className="split-ring" style={{ background: "conic-gradient(#156f4a 0deg 180deg, #a9dcc0 180deg 360deg)" }}>
+                <div className="split-ring-inner"><strong>50 / 50</strong><span>shared split</span></div>
+              </div>
+              <div className="split-details">
+                <div><span><i className="dot dot-you" />Your share</span><strong>{formatCurrency(equalShare)}</strong></div>
+                <div><span><i className="dot dot-partner" />Partner&apos;s share</span><strong>{formatCurrency(equalShare)}</strong></div>
+                <Link href="/transactions" className="text-link">Review shared expenses <ChevronRight className="h-4 w-4" /></Link>
+              </div>
+            </div>
+          </article>
+
+          <article className="panel spending-panel">
+            <div className="panel-heading">
+              <div><p className="section-kicker">THIS MONTH</p><h3>Top spending</h3></div>
+              <Link href="/categories" className="text-link">See all <ChevronRight className="h-4 w-4" /></Link>
+            </div>
+            {topSpending.length ? (
+              <div className="spending-list">
+                {topSpending.map((category, index) => {
+                  const percentage = monthExpenses ? Math.round((category.amount / monthExpenses) * 100) : 0;
+                  return (
+                    <div className="spending-item" key={category.name}>
+                      <span className="category-mark" style={{ backgroundColor: category.color || expenseColors[index] }}>{getInitials(category.name)}</span>
+                      <div className="spending-copy"><div><strong>{category.name}</strong><span>{percentage}% of expenses</span></div><div className="spending-track"><i style={{ width: `${Math.max(percentage, 5)}%`, backgroundColor: category.color || expenseColors[index] }} /></div></div>
+                      <strong className="spending-value">{formatCurrency(category.amount)}</strong>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="empty-panel"><ReceiptText className="h-8 w-8" /><p>Your category breakdown will appear as expenses are added.</p><Link href="/transactions">Add an expense</Link></div>
+            )}
+          </article>
+
+          <article className="panel flow-panel">
+            <div className="panel-heading"><div><p className="section-kicker">CASH FLOW</p><h3>Money in &amp; out</h3></div><span className="chart-note"><TrendingUp className="h-4 w-4" /> 6 months</span></div>
+            {hasChartData ? (
+              <div className="chart-wrap"><ResponsiveContainer width="100%" height={230}><AreaChart data={data?.monthlySeries} margin={{ left: -20, right: 8, top: 8 }}><defs><linearGradient id="incomeGradient" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#2da66a" stopOpacity={0.3} /><stop offset="100%" stopColor="#2da66a" stopOpacity={0} /></linearGradient><linearGradient id="expenseGradient" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#ef9d80" stopOpacity={0.2} /><stop offset="100%" stopColor="#ef9d80" stopOpacity={0} /></linearGradient></defs><CartesianGrid vertical={false} stroke="#eef5f0" strokeDasharray="3 3" /><XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: "#7a9687", fontSize: 11 }} /><YAxis axisLine={false} tickLine={false} tick={{ fill: "#7a9687", fontSize: 10 }} tickFormatter={(value: number) => `₱${Math.round(value / 1000)}k`} /><Tooltip contentStyle={chartTooltip} formatter={(value: number) => formatCurrency(value)} /><Area type="monotone" dataKey="income" name="Money in" stroke="#178b58" strokeWidth={2.5} fill="url(#incomeGradient)" /><Area type="monotone" dataKey="expense" name="Money out" stroke="#e59075" strokeWidth={2.5} fill="url(#expenseGradient)" /></AreaChart></ResponsiveContainer></div>
+            ) : <div className="empty-chart"><Sparkles className="h-7 w-7" />Add a little activity to see your money rhythm.</div>}
+          </article>
+
+          <article className="panel activity-panel">
+            <div className="panel-heading"><div><p className="section-kicker">KEEPING UP</p><h3>Recent activity</h3></div><Link href="/transactions" className="text-link">View all <ChevronRight className="h-4 w-4" /></Link></div>
+            {data?.recentTransactions.length ? <div className="activity-list">{data.recentTransactions.slice(0, 4).map((transaction) => {
+              const expense = transaction.type === "expense";
+              const category = transaction.categories?.name || (expense ? "Expense" : "Income");
+              return <div className="activity-item" key={transaction.id}><span className={`transaction-icon ${expense ? "expense" : "income"}`}>{expense ? <ArrowDownRight className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}</span><div><strong>{transaction.description}</strong><p>{category} · {formatDate(transaction.date)}</p></div><strong className={expense ? "amount-expense" : "amount-income"}>{expense ? "−" : "+"}{formatCurrency(transaction.amount)}</strong></div>;
+            })}</div> : <div className="empty-panel compact"><LayoutList className="h-7 w-7" /><p>Your latest shared money moments will live here.</p></div>}
+          </article>
+        </section>
+
+        {topCategory && <div className="insight-strip"><span className="insight-icon"><Sparkles className="h-4 w-4" /></span><p><strong>Small insight:</strong> {topCategory.name} is your biggest expense so far at {formatCurrency(topCategory.amount)}. A quick check-in together can keep the month on track.</p></div>}
       </div>
     </AppShell>
   );
