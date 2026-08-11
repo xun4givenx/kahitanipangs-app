@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/layout/app-shell";
 import { CashRecordActions } from "@/components/cash-record-actions";
+import { CategoryIconBadge, EXPENSE_CATEGORIES } from "@/components/category-icon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -137,6 +138,24 @@ export default function TransactionsPage() {
     load();
   }
 
+  async function selectCategory(value: string) {
+    if (!value.startsWith("new:")) {
+      setForm({ ...form, category_id: value });
+      return;
+    }
+
+    const name = value.slice(4);
+    const response = await fetch("/api/categories", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, type: "expense", color: "#d17a5e" }),
+    });
+    if (!response.ok) return toast.error("Could not prepare this category");
+    const created = await response.json() as Category;
+    setCategories((current) => [...current, created]);
+    setForm({ ...form, category_id: created.id });
+  }
+
   function openEdit(tx: Transaction) {
     setEditing(tx);
     setForm({
@@ -219,10 +238,15 @@ export default function TransactionsPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>Category</Label>
-                    <Select value={form.category_id} onValueChange={(v) => setForm({ ...form, category_id: v })}>
+                    <Select value={form.category_id} onValueChange={selectCategory}>
                       <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
                       <SelectContent>
-                        {filteredCategories.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                        {form.type === "expense"
+                          ? EXPENSE_CATEGORIES.map((name) => {
+                            const category = filteredCategories.find((item) => item.name === name);
+                            return <SelectItem key={name} value={category?.id || `new:${name}`}><span className="category-select-option"><CategoryIconBadge compact category={name} />{name}</span></SelectItem>;
+                          })
+                          : filteredCategories.map((category) => <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
