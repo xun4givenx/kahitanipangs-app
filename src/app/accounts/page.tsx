@@ -13,14 +13,17 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { formatCurrency, ACCOUNT_TYPES } from "@/lib/utils/finance";
-import type { Account } from "@/types/database";
-import { Plus, Trash2, Pencil, Wallet } from "lucide-react";
+import { formatCurrency, formatDate, ACCOUNT_TYPES } from "@/lib/utils/finance";
+import type { Account, Transaction } from "@/types/database";
+import { ArrowDownRight, ArrowRightLeft, ArrowUpRight, Plus, Trash2, Pencil, Wallet } from "lucide-react";
 
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Account | null>(null);
+  const [detailAccount, setDetailAccount] = useState<Account | null>(null);
+  const [movements, setMovements] = useState<Transaction[]>([]);
+  const [loadingMovements, setLoadingMovements] = useState(false);
   const [form, setForm] = useState({
     name: "", type: "checking", balance: "0", currency: "USD", color: "#3b82f6",
   });
@@ -31,6 +34,27 @@ export default function AccountsPage() {
   }
 
   useEffect(() => { load(); }, []);
+
+  async function openAccount(account: Account) {
+    setDetailAccount(account);
+    setLoadingMovements(true);
+    try {
+      const response = await fetch(`/api/transactions?account_id=${account.id}&limit=100`);
+      if (!response.ok) throw new Error();
+      setMovements(await response.json());
+    } catch {
+      toast.error("Could not load account movements");
+      setMovements([]);
+    } finally {
+      setLoadingMovements(false);
+    }
+  }
+
+  function openEdit(account: Account) {
+    setEditing(account);
+    setForm({ name: account.name, type: account.type, balance: String(account.balance), currency: account.currency, color: account.color });
+    setOpen(true);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -47,17 +71,21 @@ export default function AccountsPage() {
     });
 
     if (!res.ok) { toast.error("Failed to save account"); return; }
+    const saved = await res.json() as Account;
     toast.success(editing ? "Account updated" : "Account created");
     setOpen(false);
     setEditing(null);
     setForm({ name: "", type: "checking", balance: "0", currency: "USD", color: "#3b82f6" });
+    if (detailAccount?.id === saved.id) setDetailAccount(saved);
     load();
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this account?")) return;
-    await fetch(`/api/accounts/${id}`, { method: "DELETE" });
+    if (!confirm("Delete this account and all cash records tied to it? This cannot be undone.")) return;
+    const response = await fetch(`/api/accounts/${id}`, { method: "DELETE" });
+    if (!response.ok) return toast.error("Could not delete account");
     toast.success("Account deleted");
+    if (detailAccount?.id === id) setDetailAccount(null);
     load();
   }
 
@@ -112,8 +140,12 @@ export default function AccountsPage() {
             {accounts.map((a) => (
               <Card
                 key={a.id}
-                className="transition-colors hover:bg-accent/40"
+                className="cursor-pointer transition-colors hover:bg-accent/40"
                 style={{ borderLeftColor: a.color, borderLeftWidth: 4 }}
+                role="button"
+                tabIndex={0}
+                onClick={() => void openAccount(a)}
+                onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); void openAccount(a); } }}
               >
                 <CardContent className="flex items-center justify-between p-6">
                   <div>
@@ -121,14 +153,7 @@ export default function AccountsPage() {
                     <p className="text-sm capitalize text-muted-foreground">{a.type}</p>
                     <p className="mt-2 text-2xl font-bold">{formatCurrency(a.balance)}</p>
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => {
-                      setEditing(a);
-                      setForm({ name: a.name, type: a.type, balance: String(a.balance), currency: a.currency, color: a.color });
-                      setOpen(true);
-                    }}><Pencil className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(a.id)}><Trash2 className="h-4 w-4" /></Button>
-                  </div>
+                  <ArrowRightLeft className="h-5 w-5 text-muted-foreground" />
                 </CardContent>
               </Card>
             ))}
@@ -143,6 +168,11 @@ export default function AccountsPage() {
             </CardContent>
           </Card>
         )}
+        <Dialog open={Boolean(detailAccount)} onOpenChange={(value) => { if (!value) setDetailAccount(null); }}>
+          <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
+            {detailAccount && <><DialogHeader><DialogTitle>{detailAccount.name}</DialogTitle></DialogHeader><div className="flex items-center justify-between rounded-xl border p-4" style={{ borderLeftColor: detailAccount.color, borderLeftWidth: 4 }}><div><p className="text-sm capitalize text-muted-foreground">{detailAccount.type}</p><strong className="mt-1 block text-2xl">{formatCurrency(detailAccount.balance)}</strong></div><div className="flex gap-2"><Button type="button" variant="outline" size="sm" onClick={() => openEdit(detailAccount)}><Pencil className="mr-1.5 h-3.5 w-3.5" />Edit</Button><Button type="button" variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => void handleDelete(detailAccount.id)}><Trash2 className="mr-1.5 h-3.5 w-3.5" />Delete</Button></div></div><div><div className="mb-2 flex items-center justify-between"><h3 className="font-semibold">Account movement</h3><span className="text-xs text-muted-foreground">Last 100 records</span></div>{loadingMovements ? <p className="py-10 text-center text-sm text-muted-foreground">Loading movements…</p> : movements.length ? <div className="divide-y rounded-xl border px-3">{movements.map((movement) => { const internalTransfer = movement.notes?.startsWith("Internal transfer:"); const incoming = movement.type === "income"; return <div className="flex items-center gap-3 py-3" key={movement.id}><span className={`stat-icon h-9 w-9 rounded-lg ${internalTransfer ? "mint" : incoming ? "green" : "peach"}`}>{internalTransfer ? <ArrowRightLeft className="h-4 w-4" /> : incoming ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{movement.description || (internalTransfer ? "Transfer" : incoming ? "Cash in" : "Cash out")}</p><p className="mt-0.5 text-xs text-muted-foreground">{internalTransfer ? "Transfer" : incoming ? "Cash in" : "Cash out"} · {formatDate(movement.date)}</p></div><strong className={`shrink-0 text-sm ${internalTransfer ? "text-primary" : incoming ? "text-green-600" : "text-rose-600"}`}>{internalTransfer ? "↔" : incoming ? "+" : "−"}{formatCurrency(movement.amount)}</strong></div>; })}</div> : <div className="rounded-xl border border-dashed py-10 text-center text-sm text-muted-foreground">No cash movements for this account yet.</div>}</div></>}
+          </DialogContent>
+        </Dialog>
       </div>
     </AppShell>
   );
