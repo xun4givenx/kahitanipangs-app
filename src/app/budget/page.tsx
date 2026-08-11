@@ -9,8 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatCurrency } from "@/lib/utils/finance";
+import { CategoryIconBadge, EXPENSE_CATEGORIES } from "@/components/category-icon";
 
-const SPENDING_CATEGORIES = ["Food & groceries", "Transport", "Bills & utilities", "Rent & home", "Shopping", "Health", "Entertainment", "Debt payment", "Other spending"];
 type Period = "weekly" | "monthly";
 type CategoryBudget = { key?: string; category: string; subcategory: string; limit: number; spent?: number; color?: string | null };
 type BudgetData = { period: Period; spent: number; totalBudgeted: number; remaining: number; categoryBudgets: CategoryBudget[] };
@@ -106,7 +106,7 @@ export default function BudgetPage() {
                 <Label htmlFor="budget-category">Category</Label>
                 <Select value={category} onValueChange={setCategory}>
                   <SelectTrigger id="budget-category"><SelectValue placeholder="Choose a category" /></SelectTrigger>
-                  <SelectContent>{SPENDING_CATEGORIES.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent>
+                  <SelectContent>{EXPENSE_CATEGORIES.map((item) => <SelectItem key={item} value={item}><span className="category-select-option"><CategoryIconBadge compact category={item} />{item}</span></SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div className="budget-field">
@@ -127,7 +127,7 @@ export default function BudgetPage() {
                   const itemSpent = Number(item.spent) || 0;
                   const over = limit > 0 && itemSpent > limit;
                   return <div className="budget-category" key={item.key || `${item.category}-${item.subcategory}-${index}`}>
-                    <span style={{ backgroundColor: item.color || "#3ea96d" }} />
+                    <CategoryIconBadge category={item.category} className="budget-category-icon" />
                     <div><strong>{item.category}</strong>{item.subcategory && <small>{item.subcategory}</small>}<p className={over ? "over-text" : ""}>{formatCurrency(itemSpent)} spent of {formatCurrency(limit)}{over ? ` · ${formatCurrency(itemSpent - limit)} over` : ""}</p></div>
                     <Input type="number" min="0" inputMode="decimal" aria-label={`${item.category} budget limit`} value={String(item.limit || "")} onChange={(event) => setBudgets(budgets.map((budget, budgetIndex) => budgetIndex === index ? { ...budget, limit: Number(event.target.value) || 0 } : budget))} />
                   </div>;
