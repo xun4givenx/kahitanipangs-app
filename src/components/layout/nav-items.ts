@@ -3,6 +3,7 @@ import {
   ArrowLeftRight,
   PiggyBank,
   CreditCard,
+  ReceiptText,
   WalletCards,
   type LucideIcon,
 } from "lucide-react";
@@ -28,6 +29,7 @@ export const navGroups: NavGroup[] = [
       { href: "/accounts", label: "Accounts", icon: WalletCards },
       { href: "/debts", label: "Debt accounts", icon: CreditCard },
       { href: "/budget", label: "Budget", icon: PiggyBank },
+      { href: "/expenses", label: "Expenses", icon: ReceiptText },
     ]
   }
 ];
