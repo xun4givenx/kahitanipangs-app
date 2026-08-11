@@ -6,7 +6,7 @@ const CASH_ACCOUNT = { name: "Cash wallet", type: "cash", balance: 0, currency: 
 export async function POST(request: Request) {
   const auth = await getAuthUser();
   if (!auth) return jsonError("Unauthorized", 401);
-  const { amount, type, description, categoryName, date } = await request.json();
+  const { amount, type, description, categoryName, subcategoryName, date } = await request.json();
   if (!amount || Number(amount) <= 0 || !["income", "expense"].includes(type)) return jsonError("A positive cash amount and entry type are required");
 
   const { data: existingAccount, error: accountError } = await auth.supabase.from("accounts").select("id").eq("name", CASH_ACCOUNT.name).maybeSingle();
@@ -48,8 +48,8 @@ export async function POST(request: Request) {
     category_id: categoryId,
     amount: Number(amount),
     type,
-    description: description?.trim() || (type === "income" ? "Cash in" : "Cash out"),
-    notes: null,
+    description: subcategoryName?.trim() || description?.trim() || cleanCategory || (type === "income" ? "Cash in" : "Cash out"),
+    notes: description?.trim() || null,
     date: date || getManilaToday(),
   }).select("*, accounts(name), categories(name)").single();
   if (error) return jsonError(error.message, 500);
