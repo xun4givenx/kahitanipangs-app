@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/layout/app-shell";
+import { CashRecordActions } from "@/components/cash-record-actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,9 +20,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { getManilaToday,  formatCurrency, formatDate, FREQUENCIES  } from "@/lib/utils/finance";
+import { getManilaToday, formatCurrency, formatDate } from "@/lib/utils/finance";
 import type { Transaction, Account, Category, ScheduledTransaction, Loan, Debt } from "@/types/database";
-import { Plus, Copy, Trash2, Pencil, Repeat, Receipt } from "lucide-react";
+import { Copy, Trash2, Pencil, Repeat, Receipt } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 type LinkType = "none" | "loan" | "debt";
@@ -34,18 +35,12 @@ export default function TransactionsPage() {
   const [loans, setLoans] = useState<Loan[]>([]);
   const [debts, setDebts] = useState<Debt[]>([]);
   const [open, setOpen] = useState(false);
-  const [recurringOpen, setRecurringOpen] = useState(false);
   const [editing, setEditing] = useState<Transaction | null>(null);
   const [linkType, setLinkType] = useState<LinkType>("none");
   const [form, setForm] = useState({
     account_id: "", category_id: "", amount: "", type: "expense",
     description: "", notes: "", date: getManilaToday(),
     loan_id: "", debt_id: "",
-  });
-  const [recurringForm, setRecurringForm] = useState({
-    account_id: "", category_id: "", amount: "", type: "expense",
-    description: "", frequency: "monthly",
-    start_date: getManilaToday(), end_date: "",
   });
 
   async function load() {
@@ -119,24 +114,6 @@ export default function TransactionsPage() {
     load();
   }
 
-  async function handleRecurringSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const res = await fetch("/api/scheduled-transactions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...recurringForm,
-        amount: parseFloat(recurringForm.amount),
-        category_id: recurringForm.category_id || null,
-        end_date: recurringForm.end_date || null,
-      }),
-    });
-    if (!res.ok) { toast.error("Failed to create recurring transaction"); return; }
-    toast.success("Recurring transaction created");
-    setRecurringOpen(false);
-    load();
-  }
-
   function resetForm() {
     setForm({
       account_id: "", category_id: "", amount: "", type: "expense",
@@ -203,68 +180,9 @@ export default function TransactionsPage() {
             <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Transactions</h1>
             <p className="text-sm text-muted-foreground sm:text-base">Your complete cash-in and cash-out record</p>
           </div>
-          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
-            <Dialog open={recurringOpen} onOpenChange={setRecurringOpen}>
-              <DialogTrigger asChild>
-                <Button variant="outline" className="w-full sm:w-auto"><Repeat className="mr-1.5 h-4 w-4 sm:mr-2" />Recurring</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader><DialogTitle>New Recurring Transaction</DialogTitle></DialogHeader>
-                <form onSubmit={handleRecurringSubmit} className="space-y-4">
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label>Type</Label>
-                      <Select value={recurringForm.type} onValueChange={(v) => setRecurringForm({ ...recurringForm, type: v })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="income">Cash in</SelectItem>
-                          <SelectItem value="expense">Cash out</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Frequency</Label>
-                      <Select value={recurringForm.frequency} onValueChange={(v) => setRecurringForm({ ...recurringForm, frequency: v })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {FREQUENCIES.map((f) => (
-                            <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Account</Label>
-                    <Select value={recurringForm.account_id} onValueChange={(v) => setRecurringForm({ ...recurringForm, account_id: v })}>
-                      <SelectTrigger><SelectValue placeholder="Select account" /></SelectTrigger>
-                      <SelectContent>
-                        {accounts.map((a) => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label>Amount</Label>
-                      <Input type="number" step="0.01" value={recurringForm.amount} onChange={(e) => setRecurringForm({ ...recurringForm, amount: e.target.value })} required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Start Date</Label>
-                      <Input type="date" value={recurringForm.start_date} onChange={(e) => setRecurringForm({ ...recurringForm, start_date: e.target.value })} required />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Description</Label>
-                    <Input value={recurringForm.description} onChange={(e) => setRecurringForm({ ...recurringForm, description: e.target.value })} />
-                  </div>
-                  <Button type="submit" className="w-full">Create Recurring</Button>
-                </form>
-              </DialogContent>
-            </Dialog>
+          <div className="dashboard-actions">
+            <CashRecordActions onSuccess={load} />
             <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); resetForm(); } }}>
-              <DialogTrigger asChild>
-                <Button className="w-full sm:w-auto"><Plus className="mr-1.5 h-4 w-4 sm:mr-2" />Add Transaction</Button>
-              </DialogTrigger>
               <DialogContent>
                 <DialogHeader><DialogTitle>{editing ? "Edit" : "New"} Transaction</DialogTitle></DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">

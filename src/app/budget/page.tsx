@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle2, PiggyBank } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/app-shell";
+import { CashRecordActions } from "@/components/cash-record-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -71,10 +72,11 @@ export default function BudgetPage() {
   return (
     <AppShell>
       <div className="budget-page">
-        <section className="budget-heading">
-          <p className="eyebrow"><PiggyBank className="h-3.5 w-3.5" /> {period === "weekly" ? "Weekly plan" : "Monthly plan"}</p>
+        <section className="budget-heading budget-heading-actions">
+          <div><p className="eyebrow"><PiggyBank className="h-3.5 w-3.5" /> {period === "weekly" ? "Weekly plan" : "Monthly plan"}</p>
           <h2>Stay ahead of overspending.</h2>
-          <p>Give each spending plan a clear amount, then see how close you are to it.</p>
+          <p>Give each spending plan a clear amount, then see how close you are to it.</p></div>
+          <div className="dashboard-actions"><CashRecordActions onSuccess={() => void load()} /></div>
         </section>
 
         <section className={`budget-hero ${overspending ? "over" : ""}`}>
