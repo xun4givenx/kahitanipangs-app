@@ -1,5 +1,5 @@
-const CACHE = "kahitanipangs-shell-v1";
-const ASSETS = ["/", "/manifest.webmanifest", "/kp-wallet.svg"];
+const CACHE = "kahitanipangs-shell-v2";
+const ASSETS = ["/", "/manifest.webmanifest", "/icons/kp-wallet-192.png", "/icons/kp-wallet-512.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)));

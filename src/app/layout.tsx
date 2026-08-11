@@ -21,8 +21,8 @@ export const metadata: Metadata = {
   description: "A simple Philippine peso cash book for cash in, cash out, and budgets.",
   manifest: "/manifest.webmanifest",
   icons: {
-    icon: [{ url: "/kp-wallet.svg", type: "image/svg+xml" }],
-    apple: [{ url: "/kp-wallet.svg", type: "image/svg+xml" }],
+    icon: [{ url: "/icons/kp-wallet-192.png", sizes: "192x192", type: "image/png" }],
+    apple: [{ url: "/icons/kp-wallet-180.png", sizes: "180x180", type: "image/png" }],
   },
   appleWebApp: { capable: true, statusBarStyle: "default", title: "KahitaNiPangs" },
 };

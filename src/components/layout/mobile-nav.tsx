@@ -35,7 +35,7 @@ export function MobileNav() {
         </SheetContent>
       </Sheet>
       <Link href="/" className="flex items-center gap-2 text-lg font-bold tracking-tight">
-        <Image src="/kp-wallet.svg" alt="" width={32} height={32} className="h-8 w-8 rounded-full" priority />
+        <Image src="/icons/kp-wallet-192.png" alt="" width={32} height={32} className="h-8 w-8 rounded-full" priority />
         KahitaNiPangs
       </Link>
     </header>
