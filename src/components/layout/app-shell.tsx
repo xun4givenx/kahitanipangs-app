@@ -8,6 +8,7 @@ import { Bell, Heart } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { navGroups } from "@/components/layout/nav-items";
 import { ManilaClock } from "@/components/layout/manila-clock";
+import { BudgetAlert } from "@/components/budget-alert";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -52,6 +53,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </main>
       </div>
+      <BudgetAlert />
       <Toaster />
     </div>
   );

@@ -1,22 +1,143 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertTriangle, CheckCircle2, PiggyBank, Plus } from "lucide-react";
+import { AlertTriangle, CheckCircle2, PiggyBank } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatCurrency } from "@/lib/utils/finance";
 
-type BudgetData = { monthlyLimit: number; period: "weekly" | "monthly"; spent: number; remaining: number; categoryLimits: Record<string, number>; categories: { name: string; spent: number; color: string | null }[] };
+const SPENDING_CATEGORIES = ["Food & groceries", "Transport", "Bills & utilities", "Rent & home", "Shopping", "Health", "Entertainment", "Debt payment", "Other spending"];
+type Period = "weekly" | "monthly";
+type CategoryBudget = { key?: string; category: string; subcategory: string; limit: number; spent?: number; color?: string | null };
+type BudgetData = { period: Period; spent: number; totalBudgeted: number; remaining: number; categoryBudgets: CategoryBudget[] };
 
 export default function BudgetPage() {
-  const [data, setData] = useState<BudgetData | null>(null); const [limit, setLimit] = useState(""); const [period, setPeriod] = useState<"weekly" | "monthly">("weekly"); const [categoryLimits, setCategoryLimits] = useState<Record<string, string>>({}); const [newCategory, setNewCategory] = useState(""); const [newCategoryLimit, setNewCategoryLimit] = useState(""); const [saving, setSaving] = useState(false);
-  function load() { return fetch("/api/budget").then((response) => response.json()).then((next) => { setData(next); setLimit(next.monthlyLimit ? String(next.monthlyLimit) : ""); setPeriod(next.period || "weekly"); setCategoryLimits(Object.fromEntries(Object.entries(next.categoryLimits || {}).map(([name, value]) => [name, String(value)]))); }); }
+  const [data, setData] = useState<BudgetData | null>(null);
+  const [period, setPeriod] = useState<Period>("weekly");
+  const [amount, setAmount] = useState("");
+  const [category, setCategory] = useState("");
+  const [subcategory, setSubcategory] = useState("");
+  const [budgets, setBudgets] = useState<CategoryBudget[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  function load() {
+    return fetch("/api/budget")
+      .then((response) => response.json())
+      .then((next: BudgetData) => {
+        setData(next);
+        setPeriod(next.period || "weekly");
+        setBudgets(next.categoryBudgets || []);
+      });
+  }
+
   useEffect(() => { load(); }, []);
-  async function save() { setSaving(true); const response = await fetch("/api/budget", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ monthlyLimit: limit, categoryLimits, period }) }); setSaving(false); if (!response.ok) return toast.error("Could not save your budget"); toast.success("Budget updated"); load(); }
-  function addCategory() { const name = newCategory.trim(); if (!name) return toast.error("Name the spending category first"); if (categoryLimits[name] !== undefined || data?.categories.some((category) => category.name.toLowerCase() === name.toLowerCase())) return toast.error("That category is already in your budget"); setCategoryLimits({ ...categoryLimits, [name]: newCategoryLimit || "0" }); setNewCategory(""); setNewCategoryLimit(""); }
-  const monthlyLimit = Number(limit) || 0; const spent = data?.spent || 0; const percentage = monthlyLimit ? Math.round(spent / monthlyLimit * 100) : 0; const overspending = monthlyLimit > 0 && spent > monthlyLimit; const periodTitle = period === "weekly" ? "week" : "month";
-  return <AppShell><div className="budget-page"><section className="budget-heading"><div><p className="eyebrow"><PiggyBank className="h-3.5 w-3.5" /> {period === "weekly" ? "Weekly plan" : "Monthly plan"}</p><h2>Stay ahead of overspending.</h2><p>Set a cash-out limit, then see exactly when spending needs attention.</p></div></section><section className={`budget-hero ${overspending ? "over" : ""}`}><div><p className="budget-label">{monthlyLimit ? (overspending ? "Over budget" : `Remaining this ${periodTitle}`) : `Set your ${period} limit`}</p><strong>{monthlyLimit ? formatCurrency(Math.abs(monthlyLimit - spent)) : "₱0.00"}</strong><p>{monthlyLimit ? `${formatCurrency(spent)} spent of ${formatCurrency(monthlyLimit)} this ${periodTitle}` : "Your cash-out target goes here."}</p></div><div className="budget-status">{overspending ? <AlertTriangle className="h-6 w-6" /> : <CheckCircle2 className="h-6 w-6" />}<span>{monthlyLimit ? (overspending ? "Time to slow down" : percentage >= 80 ? "Getting close" : "On track") : "No budget set"}</span></div><div className="budget-progress"><i style={{ width: `${Math.min(percentage, 100)}%` }} /></div></section><section className="budget-grid"><article className="panel budget-settings"><div className="panel-heading"><div><p className="section-kicker">YOUR LIMIT</p><h3>{period === "weekly" ? "Weekly" : "Monthly"} cash-out budget</h3></div></div><p>Choose the most you want to spend in this {periodTitle}. Cash In is never counted against it.</p><div className="budget-period"><span>Budget period</span><Select value={period} onValueChange={(value) => setPeriod(value as "weekly" | "monthly")}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="weekly">Weekly</SelectItem><SelectItem value="monthly">Monthly</SelectItem></SelectContent></Select></div><div className="budget-input"><span>₱</span><Input type="number" min="0" inputMode="decimal" value={limit} onChange={(event) => setLimit(event.target.value)} placeholder="0.00" /></div><Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save budget"}</Button></article><article className="panel category-budgets"><div className="panel-heading"><div><p className="section-kicker">BY SPENDING TYPE</p><h3>Category limits</h3></div></div><p className="panel-subtitle">Plan categories before spending, then track each one against its own limit.</p><div className="add-budget-category"><Input placeholder="Add a category, e.g. Bills & utilities" value={newCategory} onChange={(event) => setNewCategory(event.target.value)} /><Input type="number" min="0" inputMode="decimal" placeholder="Limit" value={newCategoryLimit} onChange={(event) => setNewCategoryLimit(event.target.value)} /><Button variant="outline" size="icon" onClick={addCategory} aria-label="Add budget category"><Plus className="h-4 w-4" /></Button></div>{data?.categories?.length ? <div className="budget-category-list">{data.categories.map((category) => { const categoryLimit = Number(categoryLimits[category.name]) || 0; const over = categoryLimit > 0 && category.spent > categoryLimit; return <div className="budget-category" key={category.name}><span style={{ backgroundColor: category.color || "#3ea96d" }} /><div><strong>{category.name}</strong><p className={over ? "over-text" : ""}>{formatCurrency(category.spent)} spent{categoryLimit ? ` of ${formatCurrency(categoryLimit)}` : ""}</p></div><Input type="number" min="0" inputMode="decimal" placeholder="Limit" value={categoryLimits[category.name] || ""} onChange={(event) => setCategoryLimits({ ...categoryLimits, [category.name]: event.target.value })} /></div>; })}<Button className="save-categories" onClick={save} disabled={saving}>Save category limits</Button></div> : <div className="empty-panel"><PiggyBank className="h-8 w-8" /><p>Add a category above to start planning its budget.</p></div>}</article></section></div></AppShell>;
+
+  async function persist(nextBudgets: CategoryBudget[], successMessage: string) {
+    setSaving(true);
+    const response = await fetch("/api/budget", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ period, categoryBudgets: nextBudgets }),
+    });
+    setSaving(false);
+    if (!response.ok) return toast.error("Could not save your budget");
+    toast.success(successMessage);
+    window.dispatchEvent(new Event("budget-updated"));
+    await load();
+  }
+
+  async function saveBudget() {
+    if (!amount || Number(amount) <= 0) return toast.error("Enter the amount you want to budget");
+    if (!category) return toast.error("Choose a spending category");
+    const match = (item: CategoryBudget) => item.category.toLowerCase() === category.toLowerCase() && item.subcategory.toLowerCase() === subcategory.trim().toLowerCase();
+    const nextBudget = { category, subcategory: subcategory.trim(), limit: Number(amount) };
+    const nextBudgets = budgets.some(match) ? budgets.map((item) => match(item) ? { ...item, limit: nextBudget.limit } : item) : [...budgets, nextBudget];
+    await persist(nextBudgets, "Budget saved");
+    setAmount("");
+    setSubcategory("");
+  }
+
+  const totalBudgeted = data?.totalBudgeted || 0;
+  const spent = data?.spent || 0;
+  const percentage = totalBudgeted ? Math.round((spent / totalBudgeted) * 100) : 0;
+  const overspending = totalBudgeted > 0 && spent > totalBudgeted;
+  const periodTitle = period === "weekly" ? "week" : "month";
+
+  return (
+    <AppShell>
+      <div className="budget-page">
+        <section className="budget-heading">
+          <p className="eyebrow"><PiggyBank className="h-3.5 w-3.5" /> {period === "weekly" ? "Weekly plan" : "Monthly plan"}</p>
+          <h2>Stay ahead of overspending.</h2>
+          <p>Give each spending plan a clear amount, then see how close you are to it.</p>
+        </section>
+
+        <section className={`budget-hero ${overspending ? "over" : ""}`}>
+          <div>
+            <p className="budget-label">{totalBudgeted ? (overspending ? "Over planned budget" : `Left to spend this ${periodTitle}`) : `No ${period} budget yet`}</p>
+            <strong>{totalBudgeted ? formatCurrency(Math.abs(totalBudgeted - spent)) : "₱0.00"}</strong>
+            <p>{totalBudgeted ? `${formatCurrency(spent)} cash out of ${formatCurrency(totalBudgeted)} planned` : "Add your first category budget below."}</p>
+          </div>
+          <div className="budget-status">{overspending ? <AlertTriangle className="h-6 w-6" /> : <CheckCircle2 className="h-6 w-6" />}<span>{totalBudgeted ? (overspending ? "Time to slow down" : percentage >= 80 ? "Getting close" : "On track") : "No budget set"}</span></div>
+          <div className="budget-progress"><i style={{ width: `${Math.min(percentage, 100)}%` }} /></div>
+        </section>
+
+        <section className="budget-grid">
+          <article className="panel budget-settings">
+            <div className="panel-heading"><div><p className="section-kicker">NEW BUDGET</p><h3>Plan a spending category</h3></div></div>
+            <p>For example: set a weekly ₱10,000 plan for Food & groceries, then name it Grocery.</p>
+            <div className="budget-form-grid">
+              <div className="budget-field period-field">
+                <Label htmlFor="budget-period">Budget period</Label>
+                <Select value={period} onValueChange={(value) => setPeriod(value as Period)}>
+                  <SelectTrigger id="budget-period"><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="weekly">Weekly</SelectItem><SelectItem value="monthly">Monthly</SelectItem></SelectContent>
+                </Select>
+              </div>
+              <div className="budget-field amount-field">
+                <Label htmlFor="budget-amount">Budget amount</Label>
+                <div className="budget-input"><span>₱</span><Input id="budget-amount" type="number" min="0" inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="10,000" /></div>
+              </div>
+              <div className="budget-field">
+                <Label htmlFor="budget-category">Category</Label>
+                <Select value={category} onValueChange={setCategory}>
+                  <SelectTrigger id="budget-category"><SelectValue placeholder="Choose a category" /></SelectTrigger>
+                  <SelectContent>{SPENDING_CATEGORIES.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="budget-field">
+                <Label htmlFor="budget-subcategory">Subcategory <span>(optional)</span></Label>
+                <Input id="budget-subcategory" value={subcategory} onChange={(event) => setSubcategory(event.target.value)} placeholder="e.g. Grocery" />
+              </div>
+            </div>
+            <Button onClick={saveBudget} disabled={saving}>{saving ? "Saving…" : "Save budget"}</Button>
+          </article>
+
+          <article className="panel category-budgets">
+            <div className="panel-heading"><div><p className="section-kicker">SPENDING PROGRESS</p><h3>Category limits</h3></div></div>
+            <p className="panel-subtitle">Each plan stays here so you can see exactly how far over—or under—you are.</p>
+            {budgets.length ? (
+              <div className="budget-category-list">
+                {budgets.map((item, index) => {
+                  const limit = Number(item.limit) || 0;
+                  const itemSpent = Number(item.spent) || 0;
+                  const over = limit > 0 && itemSpent > limit;
+                  return <div className="budget-category" key={item.key || `${item.category}-${item.subcategory}-${index}`}>
+                    <span style={{ backgroundColor: item.color || "#3ea96d" }} />
+                    <div><strong>{item.category}</strong>{item.subcategory && <small>{item.subcategory}</small>}<p className={over ? "over-text" : ""}>{formatCurrency(itemSpent)} spent of {formatCurrency(limit)}{over ? ` · ${formatCurrency(itemSpent - limit)} over` : ""}</p></div>
+                    <Input type="number" min="0" inputMode="decimal" aria-label={`${item.category} budget limit`} value={String(item.limit || "")} onChange={(event) => setBudgets(budgets.map((budget, budgetIndex) => budgetIndex === index ? { ...budget, limit: Number(event.target.value) || 0 } : budget))} />
+                  </div>;
+                })}
+                <Button className="save-categories" onClick={() => persist(budgets, "Category limits updated")} disabled={saving}>{saving ? "Saving…" : "Save changes"}</Button>
+              </div>
+            ) : <div className="empty-panel"><PiggyBank className="h-8 w-8" /><p>Save a category budget to see its spending progress here.</p></div>}
+          </article>
+        </section>
+      </div>
+    </AppShell>
+  );
 }

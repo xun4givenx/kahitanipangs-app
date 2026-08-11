@@ -3,11 +3,17 @@ import { getAuthUser, jsonError, jsonOk } from "@/lib/api-helpers";
 import { getManilaToday } from "@/lib/utils/finance";
 
 type BudgetPeriod = "weekly" | "monthly";
-type BudgetSettings = { monthlyLimit: number; categoryLimits: Record<string, number>; period: BudgetPeriod };
+type BudgetCategory = { category: string; subcategory: string; limit: number };
+type BudgetSettings = { categoryBudgets: BudgetCategory[]; period: BudgetPeriod };
 
 function readBudget(metadata: unknown): BudgetSettings {
-  const source = (metadata as { cash_budget?: Partial<BudgetSettings> } | undefined)?.cash_budget;
-  return { monthlyLimit: Number(source?.monthlyLimit) || 0, categoryLimits: source?.categoryLimits || {}, period: source?.period === "monthly" ? "monthly" : "weekly" };
+  const source = (metadata as { cash_budget?: { categoryBudgets?: BudgetCategory[]; categoryLimits?: Record<string, number>; period?: BudgetPeriod } } | undefined)?.cash_budget;
+  const saved = Array.isArray(source?.categoryBudgets) ? source.categoryBudgets : [];
+  const legacy = Object.entries(source?.categoryLimits || {}).map(([category, limit]) => ({ category, subcategory: "", limit: Number(limit) || 0 }));
+  const categoryBudgets = (saved.length ? saved : legacy)
+    .filter((item) => item && typeof item.category === "string" && item.category.trim())
+    .map((item) => ({ category: item.category.trim(), subcategory: typeof item.subcategory === "string" ? item.subcategory.trim() : "", limit: Math.max(0, Number(item.limit) || 0) }));
+  return { categoryBudgets, period: source?.period === "monthly" ? "monthly" : "weekly" };
 }
 
 export async function GET() {
@@ -18,37 +24,42 @@ export async function GET() {
   const periodStart = budget.period === "weekly" ? startOfWeek(now, { weekStartsOn: 1 }) : startOfMonth(now);
   const periodEnd = budget.period === "weekly" ? endOfWeek(now, { weekStartsOn: 1 }) : endOfMonth(now);
   const [{ data: transactions, error }, { data: savedCategories, error: savedCategoriesError }] = await Promise.all([
-    auth.supabase.from("transactions").select("amount, type, categories(name, color)").eq("type", "expense").gte("date", format(periodStart, "yyyy-MM-dd")).lte("date", format(periodEnd, "yyyy-MM-dd")),
+    auth.supabase.from("transactions").select("amount, description, categories(name, color)").eq("type", "expense").gte("date", format(periodStart, "yyyy-MM-dd")).lte("date", format(periodEnd, "yyyy-MM-dd")),
     auth.supabase.from("categories").select("name, color").eq("type", "expense").order("name"),
   ]);
   if (error || savedCategoriesError) return jsonError(error?.message || savedCategoriesError?.message || "Unable to load budget categories", 500);
-  const categoryMap = new Map<string, { name: string; spent: number; color: string | null }>();
-  for (const [name] of Object.entries(budget.categoryLimits)) categoryMap.set(name, { name, spent: 0, color: null });
-  for (const category of savedCategories || []) categoryMap.set(category.name, { name: category.name, spent: categoryMap.get(category.name)?.spent || 0, color: category.color });
-  for (const transaction of transactions || []) {
-    const rawCategory = transaction.categories as { name: string; color: string } | { name: string; color: string }[] | null;
-    const category = Array.isArray(rawCategory) ? rawCategory[0] : rawCategory;
-    const name = category?.name || "Cash out";
-    const current = categoryMap.get(name) || { name, spent: 0, color: category?.color || null };
-    current.spent += Number(transaction.amount);
-    categoryMap.set(name, current);
-  }
-  const spent = Array.from(categoryMap.values()).reduce((sum, category) => sum + category.spent, 0);
+  const colors = new Map((savedCategories || []).map((category) => [category.name.toLowerCase(), category.color]));
+  const categoryBudgets = budget.categoryBudgets.map((budgetItem, index) => {
+    const spent = (transactions || []).reduce((sum, transaction) => {
+      const rawCategory = transaction.categories as { name: string; color: string } | { name: string; color: string }[] | null;
+      const category = Array.isArray(rawCategory) ? rawCategory[0] : rawCategory;
+      const matchesCategory = category?.name?.toLowerCase() === budgetItem.category.toLowerCase();
+      const matchesSubcategory = !budgetItem.subcategory || transaction.description?.trim().toLowerCase() === budgetItem.subcategory.toLowerCase();
+      return matchesCategory && matchesSubcategory ? sum + Number(transaction.amount) : sum;
+    }, 0);
+    return { key: `${budgetItem.category.toLowerCase()}::${budgetItem.subcategory.toLowerCase()}::${index}`, ...budgetItem, spent, color: colors.get(budgetItem.category.toLowerCase()) || null };
+  });
+  const spent = (transactions || []).reduce((sum, transaction) => sum + Number(transaction.amount), 0);
+  const totalBudgeted = categoryBudgets.reduce((sum, item) => sum + item.limit, 0);
   return jsonOk({
-    monthlyLimit: budget.monthlyLimit,
     period: budget.period,
     spent,
-    remaining: budget.monthlyLimit - spent,
-    categoryLimits: budget.categoryLimits,
-    categories: Array.from(categoryMap.values()).sort((a, b) => b.spent - a.spent),
+    totalBudgeted,
+    remaining: totalBudgeted - spent,
+    categoryBudgets,
   });
 }
 
 export async function PUT(request: Request) {
   const auth = await getAuthUser();
   if (!auth) return jsonError("Unauthorized", 401);
-  const { monthlyLimit, categoryLimits, period } = await request.json();
-  const budget: BudgetSettings = { monthlyLimit: Math.max(0, Number(monthlyLimit) || 0), categoryLimits: Object.fromEntries(Object.entries(categoryLimits || {}).map(([name, limit]) => [name, Math.max(0, Number(limit) || 0)])), period: period === "monthly" ? "monthly" : "weekly" };
+  const { categoryBudgets, period } = await request.json();
+  const budget: BudgetSettings = {
+    categoryBudgets: (Array.isArray(categoryBudgets) ? categoryBudgets : [])
+      .filter((item) => item && typeof item.category === "string" && item.category.trim())
+      .map((item) => ({ category: item.category.trim(), subcategory: typeof item.subcategory === "string" ? item.subcategory.trim() : "", limit: Math.max(0, Number(item.limit) || 0) })),
+    period: period === "monthly" ? "monthly" : "weekly",
+  };
   const { error } = await auth.supabase.auth.updateUser({ data: { ...auth.user.user_metadata, cash_budget: budget } });
   if (error) return jsonError(error.message, 500);
   return jsonOk(budget);
