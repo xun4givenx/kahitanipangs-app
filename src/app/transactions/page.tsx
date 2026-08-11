@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { getManilaToday,  formatCurrency, formatDate, FREQUENCIES  } from "@/lib/utils/finance";
 import type { Transaction, Account, Category, ScheduledTransaction, Loan, Debt } from "@/types/database";
 import { Plus, Copy, Trash2, Pencil, Repeat, Receipt } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 type LinkType = "none" | "loan" | "debt";
 
@@ -48,20 +49,38 @@ export default function TransactionsPage() {
   });
 
   async function load() {
-    const [txRes, accRes, catRes, schRes, loanRes, debtRes] = await Promise.all([
-      fetch("/api/transactions").then((r) => r.json()),
-      fetch("/api/accounts").then((r) => r.json()),
-      fetch("/api/categories").then((r) => r.json()),
-      fetch("/api/scheduled-transactions").then((r) => r.json()),
-      fetch("/api/loans").then((r) => r.json()),
-      fetch("/api/debts").then((r) => r.json()),
+    const supabase = createClient();
+    const [txResult, accountResult, categoryResult, scheduledResult, loanResult, debtResult] = await Promise.all([
+      supabase.from("transactions").select("*").order("date", { ascending: false }).order("created_at", { ascending: false }).limit(50),
+      supabase.from("accounts").select("*").order("name"),
+      supabase.from("categories").select("*").order("name"),
+      supabase.from("scheduled_transactions").select("*").order("next_occurrence"),
+      supabase.from("loans").select("*").order("created_at", { ascending: false }),
+      supabase.from("debts").select("*").order("created_at", { ascending: false }),
     ]);
-    setTransactions(txRes);
-    setAccounts(accRes);
-    setCategories(catRes);
-    setScheduled(schRes);
-    setLoans(Array.isArray(loanRes) ? loanRes : []);
-    setDebts(Array.isArray(debtRes) ? debtRes : []);
+
+    if (txResult.error) {
+      toast.error(txResult.error.message);
+      setTransactions([]);
+      return;
+    }
+
+    const accountRows = (accountResult.data || []) as Account[];
+    const categoryRows = (categoryResult.data || []) as Category[];
+    const accountsById = new Map(accountRows.map((account) => [account.id, account]));
+    const categoriesById = new Map(categoryRows.map((category) => [category.id, category]));
+    const transactionRows = (txResult.data || []).map((transaction) => ({
+      ...transaction,
+      accounts: accountsById.get(transaction.account_id),
+      categories: transaction.category_id ? categoriesById.get(transaction.category_id) : undefined,
+    })) as Transaction[];
+
+    setTransactions(transactionRows);
+    setAccounts(accountRows);
+    setCategories(categoryRows);
+    setScheduled((scheduledResult.data || []) as ScheduledTransaction[]);
+    setLoans((loanResult.data || []) as Loan[]);
+    setDebts((debtResult.data || []) as Debt[]);
   }
 
   useEffect(() => { load(); }, []);
