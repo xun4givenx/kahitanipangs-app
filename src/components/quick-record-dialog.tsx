@@ -47,7 +47,7 @@ export function QuickRecordDialog({ type, onSuccess }: { type: "income" | "expen
 
   useEffect(() => {
     const categoryName = (custom ? customCategory : category).trim();
-    if (!open || !categoryName) {
+    if (!open || cashIn || !categoryName) {
       setSuggestions([]);
       return;
     }
@@ -72,17 +72,17 @@ export function QuickRecordDialog({ type, onSuccess }: { type: "income" | "expen
         .limit(50);
       if (error || cancelled) return;
 
-      const savedSubcategories = Array.from(new Set(
+      setSuggestions(Array.from(new Set(
         (records || [])
           .map((record) => record.description?.trim())
           .filter((value): value is string => Boolean(value) && value !== categoryName)
-      ));
-      setSuggestions(savedSubcategories);
+      )));
     }
 
     void loadSuggestions();
     return () => { cancelled = true; };
-  }, [open, category, customCategory, custom, type]);
+  }, [open, cashIn, category, customCategory, custom, type]);
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     const categoryName = custom ? customCategory : category;

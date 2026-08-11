@@ -22,37 +22,29 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { getManilaToday, formatCurrency, formatDate } from "@/lib/utils/finance";
-import type { Transaction, Account, Category, ScheduledTransaction, Loan, Debt } from "@/types/database";
+import type { Transaction, Account, Category, ScheduledTransaction } from "@/types/database";
 import { Copy, Trash2, Pencil, Repeat, Receipt } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-
-type LinkType = "none" | "loan" | "debt";
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [scheduled, setScheduled] = useState<ScheduledTransaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loans, setLoans] = useState<Loan[]>([]);
-  const [debts, setDebts] = useState<Debt[]>([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Transaction | null>(null);
-  const [linkType, setLinkType] = useState<LinkType>("none");
   const [form, setForm] = useState({
     account_id: "", category_id: "", amount: "", type: "expense",
     description: "", notes: "", date: getManilaToday(),
-    loan_id: "", debt_id: "",
   });
 
   async function load() {
     const supabase = createClient();
-    const [txResult, accountResult, categoryResult, scheduledResult, loanResult, debtResult] = await Promise.all([
+    const [txResult, accountResult, categoryResult, scheduledResult] = await Promise.all([
       supabase.from("transactions").select("*").order("date", { ascending: false }).order("created_at", { ascending: false }).limit(50),
       supabase.from("accounts").select("*").order("name"),
       supabase.from("categories").select("*").order("name"),
       supabase.from("scheduled_transactions").select("*").order("next_occurrence"),
-      supabase.from("loans").select("*").order("created_at", { ascending: false }),
-      supabase.from("debts").select("*").order("created_at", { ascending: false }),
     ]);
 
     if (txResult.error) {
@@ -77,8 +69,6 @@ export default function TransactionsPage() {
     setAccounts(accountRows);
     setCategories(categoryRows);
     setScheduled((scheduledResult.data || []) as ScheduledTransaction[]);
-    setLoans((loanResult.data || []) as Loan[]);
-    setDebts((debtResult.data || []) as Debt[]);
   }
 
   useEffect(() => { load(); }, []);
@@ -102,8 +92,6 @@ export default function TransactionsPage() {
         ...form,
         amount: parseFloat(form.amount),
         category_id: form.category_id || null,
-        loan_id: linkType === "loan" && form.loan_id ? form.loan_id : null,
-        debt_id: linkType === "debt" && form.debt_id ? form.debt_id : null,
       }),
     });
 
@@ -119,9 +107,7 @@ export default function TransactionsPage() {
     setForm({
       account_id: "", category_id: "", amount: "", type: "expense",
       description: "", notes: "", date: getManilaToday(),
-      loan_id: "", debt_id: "",
     });
-    setLinkType("none");
   }
 
   async function handleDuplicate(id: string) {
@@ -166,10 +152,7 @@ export default function TransactionsPage() {
       description: tx.description,
       notes: tx.notes || "",
       date: tx.date,
-      loan_id: tx.loan_id || "",
-      debt_id: tx.debt_id || "",
     });
-    setLinkType(tx.loan_id ? "loan" : tx.debt_id ? "debt" : "none");
     setOpen(true);
   }
 
@@ -211,8 +194,7 @@ export default function TransactionsPage() {
                       <Select
                         value={form.type}
                         onValueChange={(v) => {
-                          setForm({ ...form, type: v, category_id: "", loan_id: "", debt_id: "" });
-                          setLinkType("none");
+                          setForm({ ...form, type: v, category_id: "" });
                         }}
                       >
                         <SelectTrigger><SelectValue /></SelectTrigger>
@@ -251,55 +233,11 @@ export default function TransactionsPage() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Apply to</Label>
-                    <Select
-                      value={linkType}
-                      onValueChange={(v) => {
-                        const val = v as LinkType;
-                        setLinkType(val);
-                        setForm({
-                          ...form,
-                          loan_id: val === "loan" ? form.loan_id : "",
-                          debt_id: val === "debt" ? form.debt_id : "",
-                        });
-                      }}
-                    >
-                      <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {form.type === "income" && <SelectItem value="loan">Loan (borrower)</SelectItem>}
-                        {form.type === "expense" && <SelectItem value="debt">Debt</SelectItem>}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {linkType === "loan" && (
-                    <div className="space-y-2">
-                      <Label>Borrower</Label>
-                      <Select value={form.loan_id} onValueChange={(v) => setForm({ ...form, loan_id: v })}>
-                        <SelectTrigger className="w-full"><SelectValue placeholder="Select borrower" /></SelectTrigger>
-                        <SelectContent>
-                          {loans.map((l) => <SelectItem key={l.id} value={l.id}>{l.person_name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                  {linkType === "debt" && (
-                    <div className="space-y-2">
-                      <Label>Debt</Label>
-                      <Select value={form.debt_id} onValueChange={(v) => setForm({ ...form, debt_id: v })}>
-                        <SelectTrigger className="w-full"><SelectValue placeholder="Select debt" /></SelectTrigger>
-                        <SelectContent>
-                          {debts.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                  <div className="space-y-2">
                     <Label>Date</Label>
                     <Input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} required />
                   </div>
                   <div className="space-y-2">
-                    <Label>Description</Label>
+                    <Label>{form.type === "expense" ? "Subcategory" : "Description"} <span className="text-muted-foreground">(optional)</span></Label>
                     <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
                   </div>
                   <div className="space-y-2">
