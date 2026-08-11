@@ -58,7 +58,7 @@ export default function TransactionsPage() {
     const accountsById = new Map(accountRows.map((account) => [account.id, account]));
     const categoriesById = new Map(categoryRows.map((category) => [category.id, category]));
     const transactionRows = (txResult.data || [])
-      .filter((transaction) => !(transaction.notes?.startsWith("Internal transfer:") && transaction.description.startsWith("Cash withdrawal from")))
+      .filter((transaction) => !(transaction.notes?.startsWith("Internal transfer:") && (transaction.description.startsWith("Cash withdrawal from") || transaction.description.startsWith("Transfer from"))))
       .map((transaction) => ({
       ...transaction,
       accounts: accountsById.get(transaction.account_id),

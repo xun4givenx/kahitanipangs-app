@@ -159,3 +159,10 @@
     text-align: left;
   }
 }
+.cash-account-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .45rem; margin-top: .85rem; width: min(100%, 390px); }
+.cash-account-tile, .cash-account-empty { position: relative; z-index: 1; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: .3rem .4rem; border: 1px solid rgba(255,255,255,.18); border-radius: .75rem; padding: .5rem .6rem; color: rgba(255,255,255,.82); background: rgba(44,30,113,.15); backdrop-filter: blur(8px); font-size: .67rem; transition: background .2s ease; }
+.cash-account-tile:hover, .cash-account-empty:hover { background: rgba(255,255,255,.2); }
+.cash-account-tile strong { grid-column: 2; overflow: hidden; color: #fff; font-size: .78rem; letter-spacing: -.02em; text-overflow: ellipsis; white-space: nowrap; }
+.cash-account-dot { width: .45rem; height: .45rem; border-radius: 999px; }
+.cash-account-empty { display: inline-flex; width: fit-content; margin-top: .85rem; gap: .3rem; }
+@media (max-width: 640px) { .cash-account-tiles { width: 100%; }.cash-account-tile { padding: .48rem .55rem; } }

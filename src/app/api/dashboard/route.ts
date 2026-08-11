@@ -55,6 +55,9 @@ export async function GET(request: Request) {
     };
   });
   const accounts = accountsRes.data || [];
+  const cashAccounts = accounts
+    .filter((account) => account.type !== "credit")
+    .map((account) => ({ id: account.id, name: account.name, balance: Number(account.balance), color: account.color, type: account.type }));
   const cashOnHand = accounts.filter((account) => account.type === "cash").reduce((sum, account) => sum + Number(account.balance), 0);
-  return jsonOk({ totalBalance: accounts.reduce((sum, account) => sum + Number(account.balance), 0), cashOnHand, cashIn, cashOut, period, periodLabel: period === "week" ? "This week" : "This month", categorySpending: Array.from(categories.values()).sort((a, b) => b.amount - a.amount), cashSeries, recentTransactions: (recentRes.data || []).filter((transaction) => !isTransfer(transaction)) });
+  return jsonOk({ totalBalance: accounts.reduce((sum, account) => sum + Number(account.balance), 0), cashOnHand, cashAccounts, cashIn, cashOut, period, periodLabel: period === "week" ? "This week" : "This month", categorySpending: Array.from(categories.values()).sort((a, b) => b.amount - a.amount), cashSeries, recentTransactions: (recentRes.data || []).filter((transaction) => !isTransfer(transaction)) });
 }
