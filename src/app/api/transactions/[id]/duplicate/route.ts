@@ -15,6 +15,7 @@ export async function POST(
     .single();
 
   if (fetchError || !original) return jsonError("Transaction not found", 404);
+  if (original.debt_id) return jsonError("Debt payments cannot be duplicated. Record a new payment from Cash out instead.");
 
   const { data, error } = await auth.supabase
     .from("transactions")

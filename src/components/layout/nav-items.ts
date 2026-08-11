@@ -2,6 +2,7 @@ import {
   LayoutDashboard,
   ArrowLeftRight,
   PiggyBank,
+  CreditCard,
   WalletCards,
   type LucideIcon,
 } from "lucide-react";
@@ -25,6 +26,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { href: "/transactions", label: "All cash records", icon: ArrowLeftRight },
       { href: "/accounts", label: "Accounts", icon: WalletCards },
+      { href: "/debts", label: "Debt accounts", icon: CreditCard },
       { href: "/budget", label: "Budget", icon: PiggyBank },
     ]
   }
