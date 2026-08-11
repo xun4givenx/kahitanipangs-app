@@ -180,7 +180,7 @@ export default function TransactionsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Transactions</h1>
-            <p className="text-muted-foreground">Manage income, expenses, and recurring payments</p>
+            <p className="text-muted-foreground">Your complete cash-in and cash-out record</p>
           </div>
           <div className="flex gap-2">
             <Dialog open={recurringOpen} onOpenChange={setRecurringOpen}>
@@ -196,8 +196,8 @@ export default function TransactionsPage() {
                       <Select value={recurringForm.type} onValueChange={(v) => setRecurringForm({ ...recurringForm, type: v })}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="income">Income</SelectItem>
-                          <SelectItem value="expense">Expense</SelectItem>
+                          <SelectItem value="income">Cash in</SelectItem>
+                          <SelectItem value="expense">Cash out</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -259,8 +259,8 @@ export default function TransactionsPage() {
                       >
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="income">Income</SelectItem>
-                          <SelectItem value="expense">Expense</SelectItem>
+                          <SelectItem value="income">Cash in</SelectItem>
+                          <SelectItem value="expense">Cash out</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -421,7 +421,7 @@ export default function TransactionsPage() {
                   <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
                     <Receipt className="h-10 w-10 text-muted-foreground/40" />
                     <p className="text-sm text-muted-foreground">
-                      No transactions yet — add your first income or expense.
+                      No cash records yet — add your first cash-in or cash-out entry.
                     </p>
                   </div>
                 )}

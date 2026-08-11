@@ -1,8 +1,6 @@
 import {
   LayoutDashboard,
   ArrowLeftRight,
-  Wallet,
-  Tags,
   type LucideIcon,
 } from "lucide-react";
 
@@ -15,17 +13,15 @@ export type NavGroup = {
 
 export const navGroups: NavGroup[] = [
   {
-    label: "PLATFORM",
+    label: "CASH FLOW",
     items: [
-      { href: "/", label: "Overview", icon: LayoutDashboard },
+      { href: "/", label: "Cash overview", icon: LayoutDashboard },
     ]
   },
   {
-    label: "01 CORE FINANCES",
+    label: "CASH BOOK",
     items: [
-      { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
-      { href: "/accounts", label: "Accounts", icon: Wallet },
-      { href: "/categories", label: "Categories", icon: Tags },
+      { href: "/transactions", label: "All cash records", icon: ArrowLeftRight },
     ]
   }
 ];

@@ -1,12 +1,9 @@
 import { getAuthUser, jsonError, jsonOk } from "@/lib/api-helpers";
-import { getHouseholdMember } from "@/lib/household";
 
 export async function GET() {
   const auth = await getAuthUser();
   if (!auth) return jsonError("Unauthorized", 401);
 
-  const member = await getHouseholdMember(auth.supabase, auth.user.id);
-  if (!member) return jsonError("Create or join a household first", 409);
   const { data, error } = await auth.supabase
     .from("scheduled_transactions")
     .select("*, accounts(name), categories(name)")
@@ -30,13 +27,10 @@ export async function POST(request: Request) {
     return jsonError("Missing required fields");
   }
 
-  const member = await getHouseholdMember(auth.supabase, auth.user.id);
-  if (!member) return jsonError("Create or join a household first", 409);
   const { data, error } = await auth.supabase
     .from("scheduled_transactions")
     .insert({
       user_id: auth.user.id,
-      household_id: member.household_id,
       account_id,
       category_id,
       amount,

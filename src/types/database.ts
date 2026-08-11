@@ -46,9 +46,6 @@ export interface Transaction {
   date: string;
   created_at: string;
   updated_at: string;
-  household_id: string;
-  contributor_id: string;
-  contributor_name: string;
   accounts?: Account;
   categories?: Category;
 }

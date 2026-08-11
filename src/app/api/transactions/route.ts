@@ -1,6 +1,5 @@
 import { getManilaToday } from "@/lib/utils/finance";
 import { getAuthUser, jsonError, jsonOk } from "@/lib/api-helpers";
-import { getHouseholdMember } from "@/lib/household";
 
 
 export async function GET(request: Request) {
@@ -38,15 +37,10 @@ export async function POST(request: Request) {
 
   const transactionDate = date || getManilaToday();
 
-  const member = await getHouseholdMember(auth.supabase, auth.user.id);
-  if (!member) return jsonError("Create or join a household first", 409);
   const { data, error } = await auth.supabase
     .from("transactions")
     .insert({
       user_id: auth.user.id,
-      household_id: member.household_id,
-      contributor_id: auth.user.id,
-      contributor_name: member.display_name,
       account_id,
       category_id,
       amount,
