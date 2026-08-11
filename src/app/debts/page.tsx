@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CreditCard, Plus } from "lucide-react";
+import { CreditCard, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/app-shell";
 import { CashRecordActions } from "@/components/cash-record-actions";
@@ -51,6 +51,14 @@ export default function DebtsPage() {
     }
   }
 
+  async function deleteDebt(debt: Debt) {
+    if (!window.confirm(`Delete ${debt.name}? Its debt-payment link will be removed, but your cash-out records will remain.`)) return;
+    const response = await fetch(`/api/debts/${debt.id}`, { method: "DELETE" });
+    if (!response.ok) return toast.error("Could not delete debt account");
+    toast.success("Debt account deleted");
+    await load();
+  }
+
   const activeDebts = debts.filter((debt) => debt.is_active && Number(debt.balance) > 0);
   const totalOwed = activeDebts.reduce((sum, debt) => sum + Number(debt.balance), 0);
 
@@ -87,7 +95,7 @@ export default function DebtsPage() {
           const original = Number(debt.original_balance) || Number(debt.balance);
           const paid = Math.max(0, original - Number(debt.balance));
           const percentage = original > 0 ? Math.min(100, Math.round((paid / original) * 100)) : 0;
-          return <Card key={debt.id} className="overflow-hidden"><CardContent className="p-5"><div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold">{debt.name}</h2>{debt.creditor && <p className="mt-1 text-sm text-muted-foreground">{debt.creditor}</p>}</div><CreditCard className="h-5 w-5 text-primary" /></div><p className="mt-6 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Remaining balance</p><strong className="text-3xl tracking-tight">{formatCurrency(Number(debt.balance))}</strong><div className="mt-5 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: `${percentage}%` }} /></div><div className="mt-2 flex justify-between text-xs text-muted-foreground"><span>{formatCurrency(paid)} paid</span><span>of {formatCurrency(original)}</span></div>{(debt.due_date || debt.due_day) && <p className="mt-4 border-t pt-4 text-sm text-muted-foreground">{debt.due_date ? `Due ${formatDate(debt.due_date)}` : ""}{debt.due_date && debt.due_day ? " · " : ""}{debt.due_day ? `Recurring due day: ${debt.due_day}${ordinal(debt.due_day)}` : ""}</p>}</CardContent></Card>;
+          return <Card key={debt.id} className="overflow-hidden"><CardContent className="p-5"><div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold">{debt.name}</h2>{debt.creditor && <p className="mt-1 text-sm text-muted-foreground">{debt.creditor}</p>}</div><div className="flex items-center gap-1"><CreditCard className="h-5 w-5 text-primary" /><Button type="button" variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => void deleteDebt(debt)} aria-label={`Delete ${debt.name}`}><Trash2 className="h-4 w-4" /></Button></div></div><p className="mt-6 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Remaining balance</p><strong className="text-3xl tracking-tight">{formatCurrency(Number(debt.balance))}</strong><div className="mt-5 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: `${percentage}%` }} /></div><div className="mt-2 flex justify-between text-xs text-muted-foreground"><span>{formatCurrency(paid)} paid</span><span>of {formatCurrency(original)}</span></div>{(debt.due_date || debt.due_day) && <p className="mt-4 border-t pt-4 text-sm text-muted-foreground">{debt.due_date ? `Due ${formatDate(debt.due_date)}` : ""}{debt.due_date && debt.due_day ? " · " : ""}{debt.due_day ? `Recurring due day: ${debt.due_day}${ordinal(debt.due_day)}` : ""}</p>}</CardContent></Card>;
         })}</div> : <Card><CardContent className="flex flex-col items-center justify-center gap-2 py-16 text-center"><CreditCard className="h-10 w-10 text-muted-foreground/40" /><p className="text-sm text-muted-foreground">No active debt accounts yet. Add a starting balance to begin tracking what you owe.</p></CardContent></Card>}
       </div>
     </AppShell>
