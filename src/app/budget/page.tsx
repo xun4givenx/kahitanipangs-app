@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertTriangle, CheckCircle2, PiggyBank } from "lucide-react";
+import { AlertTriangle, CheckCircle2, PiggyBank, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/layout/app-shell";
 import { CashRecordActions } from "@/components/cash-record-actions";
@@ -61,6 +61,13 @@ export default function BudgetPage() {
     await persist(nextBudgets, "Budget saved");
     setAmount("");
     setSubcategory("");
+  }
+
+  async function deleteBudget(index: number, item: CategoryBudget) {
+    const label = item.subcategory ? `${item.category} · ${item.subcategory}` : item.category;
+    if (!window.confirm(`Delete the budget for ${label}?`)) return;
+    const nextBudgets = budgets.filter((_, budgetIndex) => budgetIndex !== index);
+    await persist(nextBudgets, "Budget deleted");
   }
 
   const totalBudgeted = data?.totalBudgeted || 0;
@@ -132,7 +139,12 @@ export default function BudgetPage() {
                   return <div className="budget-category" key={item.key || `${item.category}-${item.subcategory}-${index}`}>
                     <CategoryIconBadge category={item.category} className="budget-category-icon" />
                     <div><strong>{item.category}</strong>{item.subcategory && <small>{item.subcategory}</small>}<p className={over ? "over-text" : ""}>{formatCurrency(itemSpent)} spent of {formatCurrency(limit)}{over ? ` · ${formatCurrency(itemSpent - limit)} over` : ""}</p></div>
-                    <Input type="number" min="0" inputMode="decimal" aria-label={`${item.category} budget limit`} value={String(item.limit || "")} onChange={(event) => setBudgets(budgets.map((budget, budgetIndex) => budgetIndex === index ? { ...budget, limit: Number(event.target.value) || 0 } : budget))} />
+                    <div className="budget-category-controls">
+                      <Input type="number" min="0" inputMode="decimal" aria-label={`${item.category} budget limit`} value={String(item.limit || "")} onChange={(event) => setBudgets(budgets.map((budget, budgetIndex) => budgetIndex === index ? { ...budget, limit: Number(event.target.value) || 0 } : budget))} />
+                      <Button type="button" variant="destructive" size="icon-sm" className="budget-delete-button" onClick={() => void deleteBudget(index, item)} disabled={saving} aria-label={`Delete ${item.category}${item.subcategory ? ` ${item.subcategory}` : ""} budget`}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>;
                 })}
                 <Button className="save-categories" onClick={() => persist(budgets, "Category limits updated")} disabled={saving}>{saving ? "Saving…" : "Save changes"}</Button>
