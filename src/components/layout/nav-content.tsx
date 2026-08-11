@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ArrowDownRight, ArrowUpRight, LogOut, Plus } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
@@ -22,13 +22,6 @@ export function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex flex-col h-full">
       <nav className="flex-1 space-y-6 p-4">
-        <div className="rounded-2xl border border-primary/15 bg-primary/[.055] p-3">
-          <p className="px-1 text-[10px] font-bold uppercase tracking-[0.14em] text-primary/70">Quick record</p>
-          <div className="mt-2 grid gap-1">
-            <Link href="/" onClick={() => onNavigate?.()} className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-sm font-semibold text-primary transition hover:bg-primary hover:text-white"><ArrowUpRight className="h-4 w-4" /> Cash in <Plus className="ml-auto h-3.5 w-3.5" /></Link>
-            <Link href="/" onClick={() => onNavigate?.()} className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-sm font-semibold text-primary transition hover:bg-primary hover:text-white"><ArrowDownRight className="h-4 w-4" /> Cash out <Plus className="ml-auto h-3.5 w-3.5" /></Link>
-          </div>
-        </div>
         {navGroups.map((group) => (
           <div key={group.label}>
             <h4 className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">
