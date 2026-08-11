@@ -1,6 +1,6 @@
 import { getManilaToday } from "@/lib/utils/finance";
 import { getAuthUser, jsonError, jsonOk } from "@/lib/api-helpers";
-import { applyDebtPayment, applyLoanCollection } from "@/lib/server/ledger";
+
 
 export async function GET(request: Request) {
   const auth = await getAuthUser();
@@ -56,47 +56,5 @@ export async function POST(request: Request) {
 
   if (error) return jsonError(error.message, 500);
 
-  let linkedLoan = null;
-  let linkedDebt = null;
-
-  if (loan_id && type === "income") {
-    const result = await applyLoanCollection(auth.supabase, auth.user.id, loan_id, {
-      collectedAmount: Number(amount),
-      collectionDate: transactionDate,
-    });
-
-    if (!result.ok) return jsonError(result.error, result.status ?? 500);
-    linkedLoan = result.data.loan;
-  } else if (debt_id && type === "expense") {
-    const result = await applyDebtPayment(auth.supabase, auth.user.id, debt_id, {
-      amount: Number(amount),
-      paymentDate: transactionDate,
-      notes,
-    });
-
-    if (!result.ok) return jsonError(result.error, result.status ?? 500);
-    linkedDebt = result.data.debt;
-
-    // Trigger GL Integration for Debt Payment
-    const { recordDebtPaymentGL } = await import("@/lib/server/gl-integration");
-    await recordDebtPaymentGL(auth.supabase, auth.user.id, {
-      paymentId: result.data.payment.id,
-      debtId: linkedDebt.id,
-      name: linkedDebt.name,
-      date: transactionDate,
-      amount: Number(amount),
-    });
-  } else {
-    // If it is just a generic transaction, trigger the generic GL integration
-    const { recordTransactionGL } = await import("@/lib/server/gl-integration");
-    await recordTransactionGL(auth.supabase, auth.user.id, {
-      transactionId: data.id,
-      type: type as "income" | "expense" | "transfer",
-      amount: Number(amount),
-      date: transactionDate,
-      description: description || "",
-    });
-  }
-
-  return jsonOk({ ...data, loan: linkedLoan, debt: linkedDebt }, 201);
+  return jsonOk(data, 201);
 }

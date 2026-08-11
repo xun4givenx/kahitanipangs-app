@@ -1,27 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+
 import { AppShell } from "@/components/layout/app-shell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { getManilaToday,  formatCurrency, formatDate  } from "@/lib/utils/finance";
+import { formatCurrency, formatDate  } from "@/lib/utils/finance";
 import type { Transaction, ScheduledTransaction, Account } from "@/types/database";
 import { AddSalaryDialog } from "@/components/add-salary-dialog";
 import {
-  Wallet, TrendingUp, TrendingDown, CreditCard, Calendar,
-  HandCoins, Receipt, PieChart as PieChartIcon, ArrowRight,
-  PiggyBank, CalendarCheck,
+  Wallet, TrendingUp, TrendingDown, Calendar,
+  Receipt, PieChart as PieChartIcon,
 } from "lucide-react";
 import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar, Cell, XAxis, YAxis,
   CartesianGrid, Tooltip, Legend,
 } from "recharts";
-import { roundToTens } from "@/lib/utils/finance";
 
 import {
   DndContext,
@@ -56,17 +54,6 @@ interface DashboardData {
   totalBalance: number;
   monthlyIncome: number;
   monthlyExpenses: number;
-  totalDebt: number;
-  totalLoansOut: number;
-  totalLoansFreshCapital: number;
-  totalLoansReinvested: number;
-  totalSavingsHeld: number;
-  collectedToday: number;
-  totalExpectedProfit: number;
-  totalRealizedProfit: number;
-  expectedDailyCollections: number;
-  dailyCollectibles: { id: string; person_name: string; repayment_amount: number; isDelayed: boolean; nextExpectedPaymentDate: string | null }[];
-  delayedPayments: { id: string; person_name: string; daysDelayed: number; delayedAmount: number; repayment_amount: number; nextExpectedPaymentDate: string | null }[];
   categorySpending: CategorySpending[];
   monthlySeries: MonthlyPoint[];
   recentTransactions: Transaction[];
@@ -90,7 +77,7 @@ const tooltipStyle = {
   fontSize: 12,
 };
 
-const DEFAULT_ORDER = ["cash", "loans_overview", "charts", "loans", "activity", "accounts"];
+const DEFAULT_ORDER = ["cash", "charts", "activity", "accounts"];
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -102,21 +89,6 @@ export default function DashboardPage() {
       .then((r) => r.json())
       .then(setData)
       .finally(() => setLoading(false));
-  }
-
-  async function handleQuickCollect(loanId: string, amount: number, collectionDate?: string) {
-    const roundedAmount = roundToTens(amount);
-    if (!confirm(`Collect ${formatCurrency(roundedAmount)} for ${collectionDate ? formatDate(collectionDate) : 'today'}?`)) return;
-    await fetch(`/api/loans/${loanId}/collections`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        kind: "collection",
-        collected_amount: roundedAmount,
-        collection_date: collectionDate || getManilaToday(),
-      }),
-    });
-    loadDashboard();
   }
 
   useEffect(() => {
@@ -178,7 +150,6 @@ export default function DashboardPage() {
     { label: "Cash on Hand", value: formatCurrency(data?.totalBalance || 0), icon: Wallet, color: "text-primary" },
     { label: "Cash In (Month)", value: formatCurrency(data?.monthlyIncome || 0), icon: TrendingUp, color: "text-green-600" },
     { label: "Cash Out (Month)", value: formatCurrency(data?.monthlyExpenses || 0), icon: TrendingDown, color: "text-red-600" },
-    { label: "Debt Payoff", value: formatCurrency(data?.totalDebt || 0), icon: CreditCard, color: "text-destructive" },
   ];
 
   const categorySpending = data?.categorySpending || [];
@@ -334,151 +305,7 @@ export default function DashboardPage() {
         </Card>
       </div>
     ),
-    loans_overview: (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardContent className="flex items-center justify-between gap-4 p-6">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-chart-3/15">
-                <HandCoins className="h-5 w-5 text-chart-3" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm text-muted-foreground">Loans out</p>
-                <p className="text-xl font-bold">{formatCurrency(data?.totalLoansOut || 0)}</p>
-                <div className="mt-1 flex flex-col gap-0.5 text-xs text-muted-foreground">
-                  <span className="flex justify-between"><span>Fresh Capital:</span> <span>{formatCurrency(data?.totalLoansFreshCapital || 0)}</span></span>
-                  <span className="flex justify-between"><span>Reinvested:</span> <span>{formatCurrency(data?.totalLoansReinvested || 0)}</span></span>
-                </div>
-              </div>
-            </div>
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/loans">
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardContent className="flex items-center gap-3 p-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-chart-5/15">
-              <CalendarCheck className="h-5 w-5 text-chart-5" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm text-muted-foreground">Collected today</p>
-              <p className="text-xl font-bold">{formatCurrency(data?.collectedToday || 0)}</p>
-              <div className="mt-1 flex flex-col gap-0.5 text-xs text-muted-foreground">
-                <span className="flex justify-between"><span>Expected Daily:</span> <span>{formatCurrency(data?.expectedDailyCollections || 0)}</span></span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="flex items-center gap-3 p-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-chart-2/15">
-              <PiggyBank className="h-5 w-5 text-chart-2" />
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Savings held</p>
-              <p className="text-xl font-bold">{formatCurrency(data?.totalSavingsHeld || 0)}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="flex items-center gap-3 p-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/15">
-              <TrendingUp className="h-5 w-5 text-primary" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm text-muted-foreground">Profit</p>
-              <p className="text-xl font-bold">{formatCurrency(data?.totalExpectedProfit || 0)}</p>
-              <div className="mt-1 flex flex-col gap-0.5 text-xs text-muted-foreground">
-                <span className="flex justify-between"><span>Realized:</span> <span>{formatCurrency(data?.totalRealizedProfit || 0)}</span></span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    ),
-    loans: (
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader className="flex flex-row items-center gap-2">
-            <CalendarCheck className="h-5 w-5 text-primary" />
-            <CardTitle>Daily Collectibles</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {data?.dailyCollectibles?.length ? (
-              <div className="space-y-3">
-                {data.dailyCollectibles.map((c) => (
-                  <div key={c.id} className="flex items-center justify-between rounded-xl bg-muted/40 p-3">
-                    <div>
-                      <p className="font-medium flex items-center gap-2">
-                        {c.person_name}
-                        {c.isDelayed && <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">Delayed</Badge>}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Amount due: {formatCurrency(roundToTens(c.repayment_amount))}
-                      </p>
-                    </div>
-                    <Button size="sm" onClick={() => handleQuickCollect(c.id, c.repayment_amount, c.nextExpectedPaymentDate || undefined)}>
-                      Collect
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
-                <HandCoins className="h-10 w-10 text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground">
-                  No expected collections for today!
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="border-destructive/20">
-          <CardHeader className="flex flex-row items-center gap-2 pb-2">
-            <TrendingDown className="h-5 w-5 text-destructive" />
-            <CardTitle className="text-destructive">Delayed Payments</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {data?.delayedPayments?.length ? (
-              <div className="space-y-3">
-                {data.delayedPayments.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between rounded-xl bg-destructive/5 p-3 border border-destructive/10">
-                    <div>
-                      <p className="font-medium">{p.person_name}</p>
-                      <p className="text-sm text-destructive font-medium">
-                        Delayed: {p.daysDelayed} days
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-destructive">
-                        {formatCurrency(p.delayedAmount)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Installment: {formatCurrency(p.repayment_amount)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
-                <TrendingUp className="h-10 w-10 text-green-500/40" />
-                <p className="text-sm text-muted-foreground">
-                  All borrowers are on schedule.
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    ),
     activity: (
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>

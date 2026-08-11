@@ -1,6 +1,6 @@
 import { getAuthUser, jsonError, jsonOk } from "@/lib/api-helpers";
 import { format, startOfMonth, endOfMonth, subMonths, parseISO } from "date-fns";
-import { loanProfit, getLoanStatus, getManilaToday } from "@/lib/utils/finance";
+import { getManilaToday } from "@/lib/utils/finance";
 
 export async function GET() {
   const auth = await getAuthUser();
@@ -8,12 +8,11 @@ export async function GET() {
 
   const manilaDateString = getManilaToday();
   const now = parseISO(manilaDateString);
-  const today = manilaDateString;
   const monthStart = format(startOfMonth(now), "yyyy-MM-dd");
   const monthEnd = format(endOfMonth(now), "yyyy-MM-dd");
   const seriesStart = format(startOfMonth(subMonths(now, 5)), "yyyy-MM-dd");
 
-  const [accountsRes, transactionsRes, debtsRes, scheduledRes, seriesRes, loansRes, collectionsTodayRes] =
+  const [accountsRes, transactionsRes, scheduledRes, seriesRes] =
     await Promise.all([
       auth.supabase.from("accounts").select("*").eq("is_active", true),
       auth.supabase
@@ -21,7 +20,6 @@ export async function GET() {
         .select("*, accounts(name, color), categories(name, color)")
         .gte("date", monthStart)
         .lte("date", monthEnd),
-      auth.supabase.from("debts").select("*").eq("is_active", true),
       auth.supabase
         .from("scheduled_transactions")
         .select("*, accounts(name), categories(name)")
@@ -34,86 +32,20 @@ export async function GET() {
         .select("amount, type, date")
         .gte("date", seriesStart)
         .lte("date", monthEnd),
-      auth.supabase
-        .from("loans")
-        .select(
-          "id, person_name, total_amount, interest_rate, advanced_interest, amount_released, remaining_balance, savings_balance, funding_source, start_date, frequency, installments, repayment_amount"
-        ),
-      auth.supabase
-        .from("loan_collections")
-        .select("loan_id, collected_amount")
-        .eq("kind", "collection")
-        .eq("collection_date", today),
     ]);
 
   const accounts = accountsRes.data || [];
   const transactions = transactionsRes.data || [];
-  const debts = debtsRes.data || [];
   const upcoming = scheduledRes.data || [];
   const seriesTransactions = seriesRes.data || [];
-  const loans = loansRes.data || [];
-  const collectionsToday = collectionsTodayRes.data || [];
 
-  const rawAccountBalance = accounts.reduce((s, a) => s + Number(a.balance), 0);
-  const totalReinvestedPrincipal = loans
-    .filter((l) => l.funding_source === 'reinvested')
-    .reduce((s, l) => s + Number(l.amount_released), 0);
-  const totalBalance = rawAccountBalance - totalReinvestedPrincipal;
+  const totalBalance = accounts.reduce((s, a) => s + Number(a.balance), 0);
   const monthlyIncome = transactions
     .filter((t) => t.type === "income")
     .reduce((s, t) => s + Number(t.amount), 0);
-  const monthlyReinvested = loans
-    .filter((l) => l.funding_source === 'reinvested' && l.start_date >= monthStart && l.start_date <= monthEnd)
-    .reduce((s, l) => s + Number(l.amount_released), 0);
   const monthlyExpenses = transactions
     .filter((t) => t.type === "expense")
-    .reduce((s, t) => s + Number(t.amount), 0) + monthlyReinvested;
-  const totalDebt = debts.reduce((s, d) => s + Number(d.balance), 0);
-  
-  const totalLoansOut = loans.reduce((s, l) => s + Number(l.remaining_balance), 0);
-  const totalLoansFreshCapital = loans.filter(l => l.funding_source === 'fresh_capital').reduce((s, l) => s + Number(l.remaining_balance), 0);
-  const totalLoansReinvested = loans.filter(l => l.funding_source === 'reinvested').reduce((s, l) => s + Number(l.remaining_balance), 0);
-  
-  const totalSavingsHeld = loans.reduce((s, l) => s + Number(l.savings_balance ?? 0), 0);
-  const collectedToday = collectionsToday.reduce((s, c) => s + Number(c.collected_amount), 0);
-  const totalExpectedProfit = loans.reduce((s, l) => s + loanProfit(l).expected, 0);
-  const totalRealizedProfit = loans.reduce((s, l) => s + loanProfit(l).realized, 0);
-
-  const expectedDailyCollections = loans
-    .filter(l => Number(l.remaining_balance) > 0 && l.frequency === "daily")
-    .reduce((s, l) => s + Number(l.repayment_amount), 0);
-
-  const collectedLoanIdsToday = new Set(collectionsToday.map(c => c.loan_id));
-  const dailyCollectibles = [];
-  const delayedPayments = [];
-
-  for (const loan of loans) {
-    if (Number(loan.remaining_balance) <= 0) continue;
-    const status = getLoanStatus(loan as unknown as import("@/types/database").Loan);
-    
-    if (status.isDelayed) {
-      delayedPayments.push({
-        id: loan.id,
-        person_name: loan.person_name,
-        daysDelayed: status.daysDelayed,
-        delayedAmount: status.delayedAmount,
-        repayment_amount: loan.repayment_amount,
-        nextExpectedPaymentDate: status.nextExpectedPaymentDate
-      });
-    }
-
-    if (status.nextExpectedPaymentDate && status.nextExpectedPaymentDate <= today) {
-      if (!collectedLoanIdsToday.has(loan.id)) {
-        dailyCollectibles.push({
-          id: loan.id,
-          person_name: loan.person_name,
-          repayment_amount: loan.repayment_amount,
-          isDelayed: status.isDelayed,
-          nextExpectedPaymentDate: status.nextExpectedPaymentDate
-        });
-      }
-    }
-  }
+    .reduce((s, t) => s + Number(t.amount), 0);
 
   // Category spending: current month's expenses grouped by category.
   const categoryMap = new Map<string, { name: string; amount: number; color: string | null }>();
@@ -155,21 +87,10 @@ export async function GET() {
     totalBalance,
     monthlyIncome,
     monthlyExpenses,
-    totalDebt,
-    totalLoansOut,
-    totalLoansFreshCapital,
-    totalLoansReinvested,
-    totalSavingsHeld,
-    collectedToday,
-    totalExpectedProfit,
-    totalRealizedProfit,
-    dailyCollectibles,
-    delayedPayments,
     categorySpending,
     monthlySeries,
     recentTransactions: recent || [],
     upcomingPayments: upcoming,
     accounts,
-    expectedDailyCollections,
   });
 }

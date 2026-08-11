@@ -3,10 +3,6 @@ import {
   ArrowLeftRight,
   Wallet,
   Tags,
-  CreditCard,
-  HandCoins,
-  BookOpen,
-  Scale,
   type LucideIcon,
 } from "lucide-react";
 
@@ -30,21 +26,6 @@ export const navGroups: NavGroup[] = [
       { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
       { href: "/accounts", label: "Accounts", icon: Wallet },
       { href: "/categories", label: "Categories", icon: Tags },
-    ]
-  },
-  {
-    label: "02 CREDIT & LOANS",
-    items: [
-      { href: "/debts", label: "Debts", icon: CreditCard },
-      { href: "/loans", label: "Loans", icon: HandCoins },
-    ]
-  },
-  {
-    label: "03 ACCOUNTING",
-    items: [
-      { href: "/ledger", label: "Ledger", icon: BookOpen },
-      { href: "/ledger/accounts", label: "Chart of Accounts", icon: Wallet },
-      { href: "/ledger/trial-balance", label: "Trial Balance", icon: Scale },
     ]
   }
 ];
