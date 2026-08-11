@@ -35,5 +35,7 @@ export async function GET() {
     const month = (seriesRes.data || []).filter((transaction) => transaction.date >= start && transaction.date <= end && !isTransfer(transaction));
     return { month: format(date, "MMM"), income: month.filter((transaction) => transaction.type === "income").reduce((sum, transaction) => sum + Number(transaction.amount), 0), expense: month.filter((transaction) => transaction.type === "expense").reduce((sum, transaction) => sum + Number(transaction.amount), 0) };
   });
-  return jsonOk({ totalBalance: (accountsRes.data || []).reduce((sum, account) => sum + Number(account.balance), 0), cashIn, cashOut, categorySpending: Array.from(categories.values()).sort((a, b) => b.amount - a.amount), monthlySeries, recentTransactions: (recentRes.data || []).filter((transaction) => !isTransfer(transaction)) });
+  const accounts = accountsRes.data || [];
+  const cashOnHand = accounts.filter((account) => account.type === "cash").reduce((sum, account) => sum + Number(account.balance), 0);
+  return jsonOk({ totalBalance: accounts.reduce((sum, account) => sum + Number(account.balance), 0), cashOnHand, cashIn, cashOut, categorySpending: Array.from(categories.values()).sort((a, b) => b.amount - a.amount), monthlySeries, recentTransactions: (recentRes.data || []).filter((transaction) => !isTransfer(transaction)) });
 }
