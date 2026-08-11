@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, LogOut, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { createClient } from "@/lib/supabase/client";
 import { navGroups } from "@/components/layout/nav-items";
 
@@ -23,6 +22,13 @@ export function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex flex-col h-full">
       <nav className="flex-1 space-y-6 p-4">
+        <div className="rounded-2xl border border-primary/15 bg-primary/[.055] p-3">
+          <p className="px-1 text-[10px] font-bold uppercase tracking-[0.14em] text-primary/70">Quick record</p>
+          <div className="mt-2 grid gap-1">
+            <Link href="/transactions?record=income" onClick={() => onNavigate?.()} className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-sm font-semibold text-primary transition hover:bg-primary hover:text-white"><ArrowUpRight className="h-4 w-4" /> Money in <Plus className="ml-auto h-3.5 w-3.5" /></Link>
+            <Link href="/transactions?record=expense" onClick={() => onNavigate?.()} className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-sm font-semibold text-primary transition hover:bg-primary hover:text-white"><ArrowDownRight className="h-4 w-4" /> Money out <Plus className="ml-auto h-3.5 w-3.5" /></Link>
+          </div>
+        </div>
         {navGroups.map((group) => (
           <div key={group.label}>
             <h4 className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">
@@ -63,7 +69,7 @@ export function NavContent({ onNavigate }: { onNavigate?: () => void }) {
           </div>
         ))}
       </nav>
-      <div className="flex items-center justify-between gap-2 border-t border-border/50 p-4 bg-background/50">
+      <div className="border-t border-border/50 p-4 bg-background/50">
         <Button
           variant="ghost"
           className="flex-1 justify-start gap-3 text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -72,7 +78,6 @@ export function NavContent({ onNavigate }: { onNavigate?: () => void }) {
           <LogOut className="h-[18px] w-[18px]" />
           Sign out
         </Button>
-        <ThemeToggle />
       </div>
     </div>
   );

@@ -66,6 +66,13 @@ export default function TransactionsPage() {
 
   useEffect(() => { load(); }, []);
 
+  useEffect(() => {
+    const recordType = new URLSearchParams(window.location.search).get("record");
+    if (recordType !== "income" && recordType !== "expense") return;
+    setForm((current) => ({ ...current, type: recordType, category_id: "" }));
+    setOpen(true);
+  }, []);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const url = editing ? `/api/transactions/${editing.id}` : "/api/transactions";
