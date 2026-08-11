@@ -176,16 +176,16 @@ export default function TransactionsPage() {
 
   return (
     <AppShell>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="transactions-page space-y-6">
+        <div className="transaction-page-header flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Transactions</h1>
-            <p className="text-muted-foreground">Your complete cash-in and cash-out record</p>
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Transactions</h1>
+            <p className="text-sm text-muted-foreground sm:text-base">Your complete cash-in and cash-out record</p>
           </div>
-          <div className="flex gap-2">
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
             <Dialog open={recurringOpen} onOpenChange={setRecurringOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline"><Repeat className="mr-2 h-4 w-4" />Recurring</Button>
+                <Button variant="outline" className="w-full sm:w-auto"><Repeat className="mr-1.5 h-4 w-4 sm:mr-2" />Recurring</Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader><DialogTitle>New Recurring Transaction</DialogTitle></DialogHeader>
@@ -242,7 +242,7 @@ export default function TransactionsPage() {
             </Dialog>
             <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditing(null); resetForm(); } }}>
               <DialogTrigger asChild>
-                <Button><Plus className="mr-2 h-4 w-4" />Add Transaction</Button>
+                <Button className="w-full sm:w-auto"><Plus className="mr-1.5 h-4 w-4 sm:mr-2" />Add Transaction</Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader><DialogTitle>{editing ? "Edit" : "New"} Transaction</DialogTitle></DialogHeader>
@@ -350,12 +350,12 @@ export default function TransactionsPage() {
           </div>
         </div>
 
-        <Tabs defaultValue="all">
-          <TabsList>
-            <TabsTrigger value="all">All Transactions</TabsTrigger>
-            <TabsTrigger value="recurring">Recurring ({scheduled.length})</TabsTrigger>
+        <Tabs defaultValue="all" className="min-w-0">
+          <TabsList className="grid h-auto w-full grid-cols-2 sm:inline-flex sm:w-auto">
+            <TabsTrigger className="min-w-0 px-2 text-xs sm:px-3 sm:text-sm" value="all">All Transactions</TabsTrigger>
+            <TabsTrigger className="min-w-0 px-2 text-xs sm:px-3 sm:text-sm" value="recurring">Recurring ({scheduled.length})</TabsTrigger>
           </TabsList>
-          <TabsContent value="all">
+          <TabsContent value="all" className="min-w-0">
             <Card>
               <CardContent className="pt-6">
                 {transactions.length ? (
@@ -428,7 +428,7 @@ export default function TransactionsPage() {
               </CardContent>
             </Card>
           </TabsContent>
-          <TabsContent value="recurring">
+          <TabsContent value="recurring" className="min-w-0">
             <Card>
               <CardHeader><CardTitle>Recurring Transactions</CardTitle></CardHeader>
               <CardContent>
