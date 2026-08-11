@@ -44,10 +44,17 @@ export async function DELETE(
   const auth = await getAuthUser();
   if (!auth) return jsonError("Unauthorized", 401);
 
-  const { error } = await auth.supabase
+  const { data: transaction, error: findError } = await auth.supabase
     .from("transactions")
-    .delete()
-    .eq("id", params.id);
+    .select("notes")
+    .eq("id", params.id)
+    .single();
+  if (findError || !transaction) return jsonError("Transaction not found", 404);
+
+  const transferId = transaction.notes?.startsWith("Internal transfer:") ? transaction.notes : null;
+  const { error } = transferId
+    ? await auth.supabase.from("transactions").delete().eq("notes", transferId)
+    : await auth.supabase.from("transactions").delete().eq("id", params.id);
 
   if (error) return jsonError(error.message, 500);
   return jsonOk({ success: true });

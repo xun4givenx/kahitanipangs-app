@@ -69,11 +69,13 @@ export default function TransactionsPage() {
     const categoryRows = (categoryResult.data || []) as Category[];
     const accountsById = new Map(accountRows.map((account) => [account.id, account]));
     const categoriesById = new Map(categoryRows.map((category) => [category.id, category]));
-    const transactionRows = (txResult.data || []).map((transaction) => ({
+    const transactionRows = (txResult.data || [])
+      .filter((transaction) => !(transaction.notes?.startsWith("Internal transfer:") && transaction.description.startsWith("Cash withdrawal from")))
+      .map((transaction) => ({
       ...transaction,
       accounts: accountsById.get(transaction.account_id),
       categories: transaction.category_id ? categoriesById.get(transaction.category_id) : undefined,
-    })) as Transaction[];
+      })) as Transaction[];
 
     setTransactions(transactionRows);
     setAccounts(accountRows);
