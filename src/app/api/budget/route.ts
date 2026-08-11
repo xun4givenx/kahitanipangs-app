@@ -16,21 +16,24 @@ function readBudget(metadata: unknown): BudgetSettings {
   return { categoryBudgets, period: source?.period === "monthly" ? "monthly" : "weekly" };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const auth = await getAuthUser();
   if (!auth) return jsonError("Unauthorized", 401);
   const now = parseISO(getManilaToday());
   const budget = readBudget(auth.user.user_metadata);
-  const periodStart = budget.period === "weekly" ? startOfWeek(now, { weekStartsOn: 1 }) : startOfMonth(now);
-  const periodEnd = budget.period === "weekly" ? endOfWeek(now, { weekStartsOn: 1 }) : endOfMonth(now);
+  const requestedPeriod = new URL(request.url).searchParams.get("period");
+  const period: BudgetPeriod = requestedPeriod === "monthly" || requestedPeriod === "weekly" ? requestedPeriod : budget.period;
+  const periodStart = period === "weekly" ? startOfWeek(now, { weekStartsOn: 1 }) : startOfMonth(now);
+  const periodEnd = period === "weekly" ? endOfWeek(now, { weekStartsOn: 1 }) : endOfMonth(now);
   const [{ data: transactions, error }, { data: savedCategories, error: savedCategoriesError }] = await Promise.all([
-    auth.supabase.from("transactions").select("amount, description, categories(name, color)").eq("type", "expense").gte("date", format(periodStart, "yyyy-MM-dd")).lte("date", format(periodEnd, "yyyy-MM-dd")),
+    auth.supabase.from("transactions").select("amount, description, notes, categories(name, color)").eq("type", "expense").gte("date", format(periodStart, "yyyy-MM-dd")).lte("date", format(periodEnd, "yyyy-MM-dd")),
     auth.supabase.from("categories").select("name, color").eq("type", "expense").order("name"),
   ]);
   if (error || savedCategoriesError) return jsonError(error?.message || savedCategoriesError?.message || "Unable to load budget categories", 500);
+  const spendTransactions = (transactions || []).filter((transaction) => !transaction.notes?.startsWith("Internal transfer:"));
   const colors = new Map((savedCategories || []).map((category) => [category.name.toLowerCase(), category.color]));
   const categoryBudgets = budget.categoryBudgets.map((budgetItem, index) => {
-    const spent = (transactions || []).reduce((sum, transaction) => {
+    const spent = spendTransactions.reduce((sum, transaction) => {
       const rawCategory = transaction.categories as { name: string; color: string } | { name: string; color: string }[] | null;
       const category = Array.isArray(rawCategory) ? rawCategory[0] : rawCategory;
       const matchesCategory = category?.name?.toLowerCase() === budgetItem.category.toLowerCase();
@@ -39,10 +42,10 @@ export async function GET() {
     }, 0);
     return { key: `${budgetItem.category.toLowerCase()}::${budgetItem.subcategory.toLowerCase()}::${index}`, ...budgetItem, spent, color: colors.get(budgetItem.category.toLowerCase()) || null };
   });
-  const spent = (transactions || []).reduce((sum, transaction) => sum + Number(transaction.amount), 0);
+  const spent = spendTransactions.reduce((sum, transaction) => sum + Number(transaction.amount), 0);
   const totalBudgeted = categoryBudgets.reduce((sum, item) => sum + item.limit, 0);
   return jsonOk({
-    period: budget.period,
+    period,
     spent,
     totalBudgeted,
     remaining: totalBudgeted - spent,

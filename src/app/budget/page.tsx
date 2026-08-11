@@ -24,8 +24,9 @@ export default function BudgetPage() {
   const [budgets, setBudgets] = useState<CategoryBudget[]>([]);
   const [saving, setSaving] = useState(false);
 
-  function load() {
-    return fetch("/api/budget")
+  function load(nextPeriod?: Period) {
+    const periodQuery = nextPeriod ? `?period=${nextPeriod}` : "";
+    return fetch(`/api/budget${periodQuery}`)
       .then((response) => response.json())
       .then((next: BudgetData) => {
         setData(next);
@@ -93,7 +94,7 @@ export default function BudgetPage() {
             <div className="budget-form-grid">
               <div className="budget-field period-field">
                 <Label htmlFor="budget-period">Budget period</Label>
-                <Select value={period} onValueChange={(value) => setPeriod(value as Period)}>
+                <Select value={period} onValueChange={(value) => void load(value as Period)}>
                   <SelectTrigger id="budget-period"><SelectValue /></SelectTrigger>
                   <SelectContent><SelectItem value="weekly">Weekly</SelectItem><SelectItem value="monthly">Monthly</SelectItem></SelectContent>
                 </Select>

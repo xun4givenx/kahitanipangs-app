@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 export const EXPENSE_CATEGORIES = [
   "Food & groceries",
   "Transport",
+  "Transportation expense",
   "Gas & fuel",
   "Bills & utilities",
   "Rent & home",
@@ -14,12 +15,15 @@ export const EXPENSE_CATEGORIES = [
   "Health",
   "Entertainment",
   "Debt payment",
+  "Kids allowances",
+  "Telco load",
   "Other spending",
 ] as const;
 
 const icons: Record<string, string> = {
   "Food & groceries": "🛒",
   Transport: "🚌",
+  "Transportation expense": "🚍",
   "Gas & fuel": "⛽",
   "Bills & utilities": "🧾",
   "Rent & home": "🏠",
@@ -30,12 +34,15 @@ const icons: Record<string, string> = {
   Health: "💗",
   Entertainment: "🎬",
   "Debt payment": "💳",
+  "Kids allowances": "🧒",
+  "Telco load": "📱",
   "Other spending": "✨",
 };
 
 const tones: Record<string, { background: string; color: string; shadow: string }> = {
   "Food & groceries": { background: "#ffe5ef", color: "#bd5f88", shadow: "rgba(189, 95, 136, .16)" },
   Transport: { background: "#e9e5ff", color: "#7060ce", shadow: "rgba(112, 96, 206, .16)" },
+  "Transportation expense": { background: "#e4f0ff", color: "#547dbd", shadow: "rgba(84, 125, 189, .16)" },
   "Gas & fuel": { background: "#fff0df", color: "#c78145", shadow: "rgba(199, 129, 69, .16)" },
   "Bills & utilities": { background: "#e7f0ff", color: "#5e82c6", shadow: "rgba(94, 130, 198, .16)" },
   "Rent & home": { background: "#f1e9ff", color: "#8b66c7", shadow: "rgba(139, 102, 199, .16)" },
@@ -46,6 +53,8 @@ const tones: Record<string, { background: string; color: string; shadow: string 
   Health: { background: "#ffe9e9", color: "#ce6b77", shadow: "rgba(206, 107, 119, .16)" },
   Entertainment: { background: "#f5e8ff", color: "#a064c9", shadow: "rgba(160, 100, 201, .16)" },
   "Debt payment": { background: "#f0efff", color: "#7065bd", shadow: "rgba(112, 101, 189, .16)" },
+  "Kids allowances": { background: "#fff0e7", color: "#bd754f", shadow: "rgba(189, 117, 79, .16)" },
+  "Telco load": { background: "#e6f7f0", color: "#4b9b7b", shadow: "rgba(75, 155, 123, .16)" },
   "Other spending": { background: "#f3eef8", color: "#83758e", shadow: "rgba(131, 117, 142, .16)" },
 };
 
