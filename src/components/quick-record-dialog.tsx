@@ -28,24 +28,6 @@ export function QuickRecordDialog({ type, onSuccess }: { type: "income" | "expen
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) throw new Error("Your session has expired. Please sign in again.");
 
-      // Existing installations were created with the former shared-household
-      // schema, where these fields are required by the database and its access
-      // rules. Keep supporting that schema while remaining compatible with a
-      // fresh single-user setup that does not have household tables.
-      const { data: membership, error: membershipError } = await supabase
-        .from("household_members")
-        .select("household_id, display_name")
-        .eq("user_id", user.id)
-        .maybeSingle();
-      if (membershipError && !["42P01", "PGRST205"].includes(membershipError.code)) throw membershipError;
-      if (!membershipError && !membership) {
-        throw new Error("Your account is not linked to a household yet.");
-      }
-
-      const householdFields = membership
-        ? { household_id: membership.household_id }
-        : {};
-
       const { data: existingAccount, error: accountError } = await supabase
         .from("accounts")
         .select("id")
@@ -59,7 +41,7 @@ export function QuickRecordDialog({ type, onSuccess }: { type: "income" | "expen
       if (!accountId) {
         const { data: account, error } = await supabase
           .from("accounts")
-          .insert({ user_id: user.id, ...householdFields, name: "Cash wallet", type: "cash", balance: 0, currency: "PHP", color: "#16845a" })
+          .insert({ user_id: user.id, name: "Cash wallet", type: "cash", balance: 0, currency: "PHP", color: "#16845a" })
           .select("id")
           .single();
         if (error) throw error;
@@ -81,7 +63,7 @@ export function QuickRecordDialog({ type, onSuccess }: { type: "income" | "expen
       if (!categoryId) {
         const { data: categoryRecord, error } = await supabase
           .from("categories")
-          .insert({ user_id: user.id, ...householdFields, name: cleanCategory, type, color: cashIn ? "#16845a" : "#d17a5e" })
+          .insert({ user_id: user.id, name: cleanCategory, type, color: cashIn ? "#16845a" : "#d17a5e" })
           .select("id")
           .single();
         if (error) throw error;
@@ -92,8 +74,6 @@ export function QuickRecordDialog({ type, onSuccess }: { type: "income" | "expen
         user_id: user.id,
         account_id: accountId,
         category_id: categoryId,
-        ...householdFields,
-        ...(membership ? { contributor_id: user.id, contributor_name: membership.display_name } : {}),
         amount: Number(amount),
         type,
         description: subcategory.trim() || note.trim() || cleanCategory,
