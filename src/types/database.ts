@@ -79,6 +79,7 @@ export interface Debt {
   interest_rate: number;
   minimum_payment: number;
   due_day: number | null;
+  due_date?: string | null;
   notes: string | null;
   is_active: boolean;
   created_at: string;
