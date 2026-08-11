@@ -17,6 +17,8 @@ export const EXPENSE_CATEGORIES = [
   "Debt payment",
   "Kids allowances",
   "Telco load",
+  "Dad",
+  "Mom",
   "Other spending",
 ] as const;
 
@@ -36,6 +38,8 @@ const icons: Record<string, string> = {
   "Debt payment": "💳",
   "Kids allowances": "🧒",
   "Telco load": "📱",
+  Dad: "👨",
+  Mom: "👩",
   "Other spending": "✨",
 };
 
@@ -55,6 +59,8 @@ const tones: Record<string, { background: string; color: string; shadow: string 
   "Debt payment": { background: "#f0efff", color: "#7065bd", shadow: "rgba(112, 101, 189, .16)" },
   "Kids allowances": { background: "#fff0e7", color: "#bd754f", shadow: "rgba(189, 117, 79, .16)" },
   "Telco load": { background: "#e6f7f0", color: "#4b9b7b", shadow: "rgba(75, 155, 123, .16)" },
+  Dad: { background: "#e8efff", color: "#5b79bc", shadow: "rgba(91, 121, 188, .16)" },
+  Mom: { background: "#ffe8f0", color: "#bd668c", shadow: "rgba(189, 102, 140, .16)" },
   "Other spending": { background: "#f3eef8", color: "#83758e", shadow: "rgba(131, 117, 142, .16)" },
 };
 
