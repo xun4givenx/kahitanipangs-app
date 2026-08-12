@@ -107,10 +107,10 @@ export default function CategoriesPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Icon</Label>
-                  <div className="grid grid-cols-5 gap-2 rounded-xl border p-3">
-                    {CATEGORY_ICON_CHOICES.map((icon) => (
+                  <div className="grid max-h-60 grid-cols-6 gap-2 overflow-y-auto rounded-xl border p-3 sm:grid-cols-8">
+                    {CATEGORY_ICON_CHOICES.map((icon, index) => (
                       <button
-                        key={icon}
+                        key={`${icon}-${index}`}
                         type="button"
                         aria-label={`Use ${icon} as the category icon`}
                         className={`grid h-9 place-items-center rounded-lg text-lg transition-colors ${form.icon === icon ? "bg-primary/15 ring-1 ring-primary" : "hover:bg-muted"}`}
