@@ -11,7 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCurrency, formatDate } from "@/lib/utils/finance";
-import type { Debt } from "@/types/database";
+import type { Debt, DebtPayment } from "@/types/database";
+import { TAccount } from "@/components/t-account";
 
 const emptyForm = { name: "", creditor: "", startingBalance: "", dueDate: "", dueDay: "" };
 
@@ -20,6 +21,8 @@ export default function DebtsPage() {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const [detail, setDetail] = useState<{ debt: Debt; payments: DebtPayment[] } | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
 
   async function load() {
     const response = await fetch("/api/debts");
@@ -59,6 +62,19 @@ export default function DebtsPage() {
     await load();
   }
 
+  async function openDebt(debt: Debt) {
+    setLoadingDetail(true);
+    try {
+      const response = await fetch(`/api/debts/${debt.id}`);
+      if (!response.ok) throw new Error();
+      setDetail(await response.json());
+    } catch {
+      toast.error("Could not load debt activity");
+    } finally {
+      setLoadingDetail(false);
+    }
+  }
+
   const activeDebts = debts.filter((debt) => debt.is_active && Number(debt.balance) > 0);
   const totalOwed = activeDebts.reduce((sum, debt) => sum + Number(debt.balance), 0);
 
@@ -95,8 +111,9 @@ export default function DebtsPage() {
           const original = Number(debt.original_balance) || Number(debt.balance);
           const paid = Math.max(0, original - Number(debt.balance));
           const percentage = original > 0 ? Math.min(100, Math.round((paid / original) * 100)) : 0;
-          return <Card key={debt.id} className="overflow-hidden"><CardContent className="p-5"><div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold">{debt.name}</h2>{debt.creditor && <p className="mt-1 text-sm text-muted-foreground">{debt.creditor}</p>}</div><div className="flex items-center gap-1"><CreditCard className="h-5 w-5 text-primary" /><Button type="button" variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => void deleteDebt(debt)} aria-label={`Delete ${debt.name}`}><Trash2 className="h-4 w-4" /></Button></div></div><p className="mt-6 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Remaining balance</p><strong className="text-3xl tracking-tight">{formatCurrency(Number(debt.balance))}</strong><div className="mt-5 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: `${percentage}%` }} /></div><div className="mt-2 flex justify-between text-xs text-muted-foreground"><span>{formatCurrency(paid)} paid</span><span>of {formatCurrency(original)}</span></div>{(debt.due_date || debt.due_day) && <p className="mt-4 border-t pt-4 text-sm text-muted-foreground">{debt.due_date ? `Due ${formatDate(debt.due_date)}` : ""}{debt.due_date && debt.due_day ? " · " : ""}{debt.due_day ? `Recurring due day: ${debt.due_day}${ordinal(debt.due_day)}` : ""}</p>}</CardContent></Card>;
+          return <Card key={debt.id} className="cursor-pointer overflow-hidden transition-colors hover:bg-accent/40" role="button" tabIndex={0} onClick={() => void openDebt(debt)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); void openDebt(debt); } }}><CardContent className="p-5"><div className="flex items-start justify-between gap-3"><div><h2 className="font-semibold">{debt.name}</h2>{debt.creditor && <p className="mt-1 text-sm text-muted-foreground">{debt.creditor}</p>}</div><div className="flex items-center gap-1"><CreditCard className="h-5 w-5 text-primary" /><Button type="button" variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={(event) => { event.stopPropagation(); void deleteDebt(debt); }} aria-label={`Delete ${debt.name}`}><Trash2 className="h-4 w-4" /></Button></div></div><p className="mt-6 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Remaining balance</p><strong className="text-3xl tracking-tight">{formatCurrency(Number(debt.balance))}</strong><div className="mt-5 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: `${percentage}%` }} /></div><div className="mt-2 flex justify-between text-xs text-muted-foreground"><span>{formatCurrency(paid)} paid</span><span>of {formatCurrency(original)}</span></div>{(debt.due_date || debt.due_day) && <p className="mt-4 border-t pt-4 text-sm text-muted-foreground">{debt.due_date ? `Due ${formatDate(debt.due_date)}` : ""}{debt.due_date && debt.due_day ? " · " : ""}{debt.due_day ? `Recurring due day: ${debt.due_day}${ordinal(debt.due_day)}` : ""}</p>}</CardContent></Card>;
         })}</div> : <Card><CardContent className="flex flex-col items-center justify-center gap-2 py-16 text-center"><CreditCard className="h-10 w-10 text-muted-foreground/40" /><p className="text-sm text-muted-foreground">No active debt accounts yet. Add a starting balance to begin tracking what you owe.</p></CardContent></Card>}
+        <Dialog open={Boolean(detail) || loadingDetail} onOpenChange={(value) => { if (!value) setDetail(null); }}><DialogContent className="sm:max-w-2xl">{loadingDetail && !detail ? <p className="py-10 text-center text-sm text-muted-foreground">Loading debt activity…</p> : detail && <><DialogHeader><DialogTitle>{detail.debt.name}</DialogTitle></DialogHeader><div className="rounded-xl border border-primary/20 bg-primary/5 p-4"><p className="text-sm text-muted-foreground">Remaining liability</p><strong className="mt-1 block text-2xl">{formatCurrency(Number(detail.debt.balance))}</strong></div><div><div className="mb-2 flex items-center justify-between"><h3 className="font-semibold">Debt account</h3><span className="text-xs text-muted-foreground">Credit increases what you owe; debit reduces it.</span></div><TAccount debitLabel="Debit · payments" creditLabel="Credit · opening debt" debits={detail.payments.map((payment) => ({ id: payment.id, date: payment.payment_date, description: payment.notes?.replace(/^\[cash:[^\]]+\]\s*/, "") || "Debt payment", amount: Number(payment.amount) }))} credits={[{ id: `${detail.debt.id}-opening`, date: detail.debt.created_at.slice(0, 10), description: "Opening debt balance", amount: Number(detail.debt.original_balance) || Number(detail.debt.balance) }]} emptyDebitText="No payments linked yet." /></div></>}</DialogContent></Dialog>
       </div>
     </AppShell>
   );

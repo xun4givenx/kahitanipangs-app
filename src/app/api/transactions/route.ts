@@ -7,7 +7,8 @@ export async function GET(request: Request) {
   if (!auth) return jsonError("Unauthorized", 401);
 
   const { searchParams } = new URL(request.url);
-  const limit = parseInt(searchParams.get("limit") || "50");
+  const requestedLimit = parseInt(searchParams.get("limit") || "100");
+  const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 1000) : 100;
   const accountId = searchParams.get("account_id");
 
   let query = auth.supabase

@@ -22,7 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { getManilaToday, formatCurrency, formatDate } from "@/lib/utils/finance";
-import type { Transaction, Account, Category, ScheduledTransaction } from "@/types/database";
+import type { Transaction, Account, Category, Loan, ScheduledTransaction } from "@/types/database";
 import { Copy, Trash2, Pencil, Repeat, Receipt } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -31,19 +31,25 @@ export default function TransactionsPage() {
   const [scheduled, setScheduled] = useState<ScheduledTransaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [loans, setLoans] = useState<Loan[]>([]);
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [accountFilter, setAccountFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Transaction | null>(null);
   const [form, setForm] = useState({
-    account_id: "", category_id: "", amount: "", type: "expense",
+    account_id: "", category_id: "", loan_id: "", amount: "", type: "expense",
     description: "", notes: "", date: getManilaToday(),
   });
 
   async function load() {
     const supabase = createClient();
-    const [txResult, accountResult, categoryResult, scheduledResult] = await Promise.all([
-      supabase.from("transactions").select("*").order("date", { ascending: false }).order("created_at", { ascending: false }).limit(50),
+    const [txResult, accountResult, categoryResult, loanResult, scheduledResult] = await Promise.all([
+      supabase.from("transactions").select("*").order("date", { ascending: false }).order("created_at", { ascending: false }),
       supabase.from("accounts").select("*").order("name"),
       supabase.from("categories").select("*").order("name"),
+      supabase.from("loans").select("*").order("person_name"),
       supabase.from("scheduled_transactions").select("*").order("next_occurrence"),
     ]);
 
@@ -68,6 +74,7 @@ export default function TransactionsPage() {
     setTransactions(transactionRows);
     setAccounts(accountRows);
     setCategories(categoryRows);
+    setLoans((loanResult.data || []) as Loan[]);
     setScheduled((scheduledResult.data || []) as ScheduledTransaction[]);
   }
 
@@ -105,7 +112,7 @@ export default function TransactionsPage() {
 
   function resetForm() {
     setForm({
-      account_id: "", category_id: "", amount: "", type: "expense",
+      account_id: "", category_id: "", loan_id: "", amount: "", type: "expense",
       description: "", notes: "", date: getManilaToday(),
     });
   }
@@ -147,6 +154,7 @@ export default function TransactionsPage() {
     setForm({
       account_id: tx.account_id,
       category_id: tx.category_id || "",
+      loan_id: tx.loan_id || "",
       amount: String(tx.amount),
       type: tx.type,
       description: tx.description,
@@ -158,6 +166,14 @@ export default function TransactionsPage() {
 
   const filteredCategories = categories.filter((c) => c.type === form.type);
   const expenseCategoryOptions = useMemo(() => getExpenseCategoryOptions(categories), [categories]);
+  const visibleTransactions = useMemo(() => transactions.filter((transaction) => {
+    const matchesType = typeFilter === "all" || transaction.type === typeFilter;
+    const matchesAccount = accountFilter === "all" || transaction.account_id === accountFilter;
+    const matchesCategory = categoryFilter === "all" || transaction.category_id === categoryFilter;
+    const term = search.trim().toLowerCase();
+    const matchesSearch = !term || [transaction.description, transaction.notes, (transaction.accounts as { name?: string } | undefined)?.name, (transaction.categories as { name?: string } | undefined)?.name].some((value) => value?.toLowerCase().includes(term));
+    return matchesType && matchesAccount && matchesCategory && matchesSearch;
+  }), [transactions, typeFilter, accountFilter, categoryFilter, search]);
 
   function txActions(t: (typeof transactions)[number]) {
     return (
@@ -195,7 +211,7 @@ export default function TransactionsPage() {
                       <Select
                         value={form.type}
                         onValueChange={(v) => {
-                          setForm({ ...form, type: v, category_id: "" });
+                          setForm({ ...form, type: v, category_id: "", loan_id: v === "income" ? form.loan_id : "" });
                         }}
                       >
                         <SelectTrigger><SelectValue /></SelectTrigger>
@@ -219,6 +235,7 @@ export default function TransactionsPage() {
                       </SelectContent>
                     </Select>
                   </div>
+                  {editing && form.type === "income" && <div className="space-y-2"><Label>Link to loan account <span className="text-muted-foreground">(optional)</span></Label><Select value={form.loan_id || "none"} onValueChange={(value) => setForm({ ...form, loan_id: value === "none" ? "" : value })}><SelectTrigger><SelectValue placeholder="Not a loan collection" /></SelectTrigger><SelectContent><SelectItem value="none">Not a loan collection</SelectItem>{loans.map((loan) => <SelectItem key={loan.id} value={loan.id}>{loan.person_name} · {formatCurrency(Number(loan.remaining_balance))} outstanding</SelectItem>)}</SelectContent></Select><p className="text-xs text-muted-foreground">Use this to attach a previous cash-in to the person&apos;s loan card.</p></div>}
                   <div className="space-y-2">
                     <Label>Category</Label>
                     <Select value={form.category_id} onValueChange={selectCategory}>
@@ -260,7 +277,14 @@ export default function TransactionsPage() {
           <TabsContent value="all" className="min-w-0">
             <Card>
               <CardContent className="pt-6">
-                {transactions.length ? (
+                <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search description or note" />
+                  <Select value={typeFilter} onValueChange={setTypeFilter}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All cash flow</SelectItem><SelectItem value="income">Cash in</SelectItem><SelectItem value="expense">Cash out</SelectItem></SelectContent></Select>
+                  <Select value={accountFilter} onValueChange={setAccountFilter}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All accounts</SelectItem>{accounts.map((account) => <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>)}</SelectContent></Select>
+                  <Select value={categoryFilter} onValueChange={setCategoryFilter}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All categories</SelectItem>{categories.map((category) => <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>)}</SelectContent></Select>
+                </div>
+                <p className="mb-4 text-xs text-muted-foreground">Showing {visibleTransactions.length} of {transactions.length} cash records</p>
+                {visibleTransactions.length ? (
                   <>
                   <div className="hidden w-full overflow-x-auto md:block">
                   <Table>
@@ -275,7 +299,7 @@ export default function TransactionsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {transactions.map((t) => (
+                      {visibleTransactions.map((t) => (
                         <TableRow key={t.id}>
                           <TableCell>{formatDate(t.date)}</TableCell>
                           <TableCell>{t.description}</TableCell>
@@ -293,7 +317,7 @@ export default function TransactionsPage() {
                   </Table>
                   </div>
                   <div className="space-y-3 md:hidden">
-                    {transactions.map((t) => (
+                    {visibleTransactions.map((t) => (
                       <div key={t.id} className="rounded-lg border border-border/60 p-3">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
@@ -322,9 +346,7 @@ export default function TransactionsPage() {
                 ) : (
                   <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
                     <Receipt className="h-10 w-10 text-muted-foreground/40" />
-                    <p className="text-sm text-muted-foreground">
-                      No cash records yet — add your first cash-in or cash-out entry.
-                    </p>
+                    <p className="text-sm text-muted-foreground">{transactions.length ? "No records match these filters." : "No cash records yet — add your first cash-in or cash-out entry."}</p>
                   </div>
                 )}
               </CardContent>

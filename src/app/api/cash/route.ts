@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     return jsonError("The cash record could not be read");
   }
 
-  const { amount, type, description, categoryName, subcategoryName, date, accountId, debtId } = body;
+  const { amount, type, description, categoryName, subcategoryName, date, accountId, debtId, loanId } = body;
   const numericAmount = Number(amount);
   if (!Number.isFinite(numericAmount) || numericAmount <= 0 || !["income", "expense"].includes(String(type))) {
     return jsonError("Enter a positive amount and choose cash in or cash out");
@@ -32,10 +32,14 @@ export async function POST(request: Request) {
   const transactionDate = typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : getManilaToday();
   const selectedAccountId = typeof accountId === "string" && accountId.trim() && accountId !== "cash-wallet" ? accountId : null;
   const selectedDebtId = typeof debtId === "string" && debtId.trim() ? debtId : null;
+  const selectedLoanId = typeof loanId === "string" && loanId.trim() ? loanId : null;
   const isDebtPayment = transactionType === "expense" && cleanCategory.toLowerCase() === "debt payment";
+  const isLoanCollection = transactionType === "income" && cleanCategory.toLowerCase() === "loan collection";
 
   if (isDebtPayment && !selectedDebtId) return jsonError("Choose the debt you are paying");
   if (!isDebtPayment && selectedDebtId) return jsonError("A debt can only be linked to a Debt payment cash-out");
+  if (isLoanCollection && !selectedLoanId) return jsonError("Choose the loan account receiving this collection");
+  if (!isLoanCollection && selectedLoanId) return jsonError("A loan can only be linked to a Loan collection cash-in");
 
   // `limit(1)` keeps existing wallets usable even if an older database contains
   // duplicate setup rows. A previous version used `maybeSingle`, which turns
@@ -87,6 +91,15 @@ export async function POST(request: Request) {
     debtName = debt.name;
   }
 
+  let loanBalance: number | null = null;
+  if (isLoanCollection && selectedLoanId) {
+    const { data: loan, error: loanError } = await auth.supabase.from("loans").select("person_name, remaining_balance").eq("id", selectedLoanId).maybeSingle();
+    if (loanError) return jsonError(loanError.message, 500);
+    if (!loan) return jsonError("The selected loan account is unavailable", 404);
+    if (numericAmount > Number(loan.remaining_balance)) return jsonError("Collection cannot exceed the outstanding loan balance");
+    loanBalance = Number(loan.remaining_balance);
+  }
+
   let categoryId: string | null = null;
   {
     const { data: category, error: categoryError } = await auth.supabase
@@ -136,6 +149,7 @@ export async function POST(request: Request) {
     notes: cleanDescription || null,
     date: transactionDate,
     debt_id: selectedDebtId,
+    loan_id: selectedLoanId,
   }).select("*, accounts(name), categories(name)").single();
   if (error) return jsonError(error.message, 500);
 
@@ -150,6 +164,28 @@ export async function POST(request: Request) {
     if (paymentError) {
       await auth.supabase.from("transactions").delete().eq("id", data.id);
       return jsonError(paymentError.message, 500);
+    }
+  }
+  if (isLoanCollection && selectedLoanId) {
+    const { error: collectionError } = await auth.supabase.from("loan_collections").insert({
+      user_id: auth.user.id,
+      loan_id: selectedLoanId,
+      kind: "collection",
+      collection_date: transactionDate,
+      installment_amount: numericAmount,
+      collected_amount: numericAmount,
+      savings_delta: 0,
+      note: `[cash:${data.id}]${cleanDescription ? ` ${cleanDescription}` : ""}`,
+    });
+    if (collectionError) {
+      await auth.supabase.from("transactions").delete().eq("id", data.id);
+      return jsonError(collectionError.message, 500);
+    }
+    const { error: loanUpdateError } = await auth.supabase.from("loans").update({ remaining_balance: Math.max(0, (loanBalance || 0) - numericAmount) }).eq("id", selectedLoanId);
+    if (loanUpdateError) {
+      await auth.supabase.from("loan_collections").delete().eq("loan_id", selectedLoanId).like("note", `[cash:${data.id}]%`);
+      await auth.supabase.from("transactions").delete().eq("id", data.id);
+      return jsonError(loanUpdateError.message, 500);
     }
   }
   return jsonOk(data, 201);
