@@ -4,7 +4,7 @@ import { NavContent } from "@/components/layout/nav-content";
 
 export function Sidebar() {
   return (
-    <aside className="hidden h-screen w-[264px] flex-col bg-sidebar border-r border-border lg:flex z-20">
+    <aside className="relative z-[70] hidden h-screen w-[264px] flex-col touch-manipulation bg-sidebar border-r border-border lg:flex">
       <div className="flex h-[72px] items-center px-6">
         <Link href="/" className="flex items-center gap-3">
           <Image src="/icons/kp-wallet-192.png" alt="" width={36} height={36} className="h-9 w-9 rounded-full shadow-lg shadow-primary/20" priority />

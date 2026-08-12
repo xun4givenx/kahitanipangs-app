@@ -19,9 +19,14 @@ export function NavContent({ onNavigate }: { onNavigate?: () => void }) {
     router.refresh();
   }
 
+  function navigate(href: string) {
+    onNavigate?.();
+    router.push(href);
+  }
+
   return (
     <div className="flex flex-col h-full">
-      <nav className="flex-1 space-y-6 p-4">
+      <nav className="relative z-[71] flex-1 space-y-6 p-4">
         {navGroups.map((group) => (
           <div key={group.label}>
             <h4 className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">
@@ -36,8 +41,12 @@ export function NavContent({ onNavigate }: { onNavigate?: () => void }) {
                     key={item.href}
                     href={item.href}
                     onClick={() => onNavigate?.()}
+                    onTouchEnd={(event) => {
+                      event.preventDefault();
+                      navigate(item.href);
+                    }}
                     className={cn(
-                      "group flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
+                      "group relative z-[72] flex touch-manipulation cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
                       active
                         ? "bg-primary/10 text-primary"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground"
