@@ -2,20 +2,8 @@ import type { CSSProperties } from "react";
 import { cn } from "@/lib/utils";
 
 export const CATEGORY_ICON_CHOICES = [
-  // Everyday essentials
-  "🏷️", "🛒", "🍽️", "☕", "🥬", "🍞", "💧", "🧾", "💡", "📶",
-  // Home and household
-  "🏠", "🔧", "🛋️", "🧺", "🧹", "🛏️", "🪴", "🔑", "📦", "🛡️",
-  // Travel and vehicles
-  "🚌", "🚍", "🚗", "🏍️", "⛽", "🛞", "🅿️", "🚕", "✈️", "🧳",
-  // Family, health, and care
-  "👨", "👩", "🧒", "👶", "🐾", "💗", "💊", "🩺", "🏥", "🎓",
-  // Money and work
-  "💼", "💰", "💵", "💳", "🏦", "🤝", "📈", "🎁", "🧾", "🪙",
-  // Personal and lifestyle
-  "🛍️", "👕", "💇", "💄", "🎬", "🎮", "🎵", "📚", "⚽", "🎉",
-  // Communication and misc.
-  "📱", "💻", "📷", "🌐", "🕹️", "☂️", "🌱", "🧯", "⭐", "✨",
+  "🏷️", "🛒", "🚌", "⛽", "🧾", "🏠", "🛍️", "💗", "🎬", "💳",
+  "🤝", "💵", "🧺", "🐾", "🧒", "📱", "👨", "👩", "✨", "💼",
 ] as const;
 
 export const EXPENSE_CATEGORIES = [
