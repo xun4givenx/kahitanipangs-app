@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ const CASH_IN_OPTIONS = ["Salary", "Business / freelance", "Allowance", "Gift", 
 const CASH_OUT_OPTIONS = EXPENSE_CATEGORIES;
 
 export function QuickRecordDialog({ type, onSuccess }: { type: "income" | "expense"; onSuccess?: () => void }) {
-  const [open, setOpen] = useState(false); const [saving, setSaving] = useState(false); const [amount, setAmount] = useState(""); const [category, setCategory] = useState(""); const [customCategory, setCustomCategory] = useState(""); const [subcategory, setSubcategory] = useState(""); const [note, setNote] = useState(""); const [date, setDate] = useState(getManilaToday()); const [suggestions, setSuggestions] = useState<string[]>([]); const [customCategorySuggestions, setCustomCategorySuggestions] = useState<string[]>([]); const [incomeAccounts, setIncomeAccounts] = useState<Account[]>([]); const [depositAccountId, setDepositAccountId] = useState(""); const [debts, setDebts] = useState<Debt[]>([]); const [debtId, setDebtId] = useState(""); const [savedCategories, setSavedCategories] = useState<Category[]>([]); const cashIn = type === "income"; const baseOptions = cashIn ? CASH_IN_OPTIONS : CASH_OUT_OPTIONS; const options = Array.from(new Set([...baseOptions, ...savedCategories.filter((item) => item.type === type).map((item) => item.name)])); const custom = category.startsWith("Other"); const isDebtPayment = !cashIn && category === "Debt payment"; const subcategoryListId = `cash-${type}-subcategory-options`; const customCategoryListId = `cash-${type}-custom-category-options`;
+  const [open, setOpen] = useState(false); const [saving, setSaving] = useState(false); const [amount, setAmount] = useState(""); const [category, setCategory] = useState(""); const [customCategory, setCustomCategory] = useState(""); const [subcategory, setSubcategory] = useState(""); const [note, setNote] = useState(""); const [date, setDate] = useState(getManilaToday()); const [suggestions, setSuggestions] = useState<string[]>([]); const [customCategorySuggestions, setCustomCategorySuggestions] = useState<string[]>([]); const [incomeAccounts, setIncomeAccounts] = useState<Account[]>([]); const [depositAccountId, setDepositAccountId] = useState(""); const [debts, setDebts] = useState<Debt[]>([]); const [debtId, setDebtId] = useState(""); const [savedCategories, setSavedCategories] = useState<Category[]>([]); const cashIn = type === "income"; const baseOptions = cashIn ? CASH_IN_OPTIONS : CASH_OUT_OPTIONS; const options = useMemo(() => Array.from(new Set([...baseOptions, ...savedCategories.filter((item) => item.type === type).map((item) => item.name)])), [baseOptions, savedCategories, type]); const custom = category.startsWith("Other"); const isDebtPayment = !cashIn && category === "Debt payment"; const subcategoryListId = `cash-${type}-subcategory-options`; const customCategoryListId = `cash-${type}-custom-category-options`;
 
   useEffect(() => {
     if (!open) return;
