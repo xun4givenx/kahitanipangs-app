@@ -24,11 +24,16 @@ export async function PUT(
   const auth = await getAuthUser();
   if (!auth) return jsonError("Unauthorized", 401);
 
-  const body = await request.json();
+  const body = await request.json() as Record<string, unknown>;
+  const name = typeof body.name === "string" ? body.name.trim() : "";
+  const type = body.type === "income" || body.type === "expense" ? body.type : "";
+  const color = typeof body.color === "string" && body.color.trim() ? body.color.trim() : "#6366f1";
+  const icon = typeof body.icon === "string" && body.icon.trim() ? body.icon.trim().slice(0, 8) : null;
+  if (!name || !type) return jsonError("Name and type are required");
 
   const { data, error } = await auth.supabase
     .from("categories")
-    .update(body)
+    .update({ name, type, color, icon })
     .eq("id", params.id)
     .select()
     .single();

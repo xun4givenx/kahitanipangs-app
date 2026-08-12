@@ -1,6 +1,11 @@
 import type { CSSProperties } from "react";
 import { cn } from "@/lib/utils";
 
+export const CATEGORY_ICON_CHOICES = [
+  "🏷️", "🛒", "🚌", "⛽", "🧾", "🏠", "🛍️", "💗", "🎬", "💳",
+  "🤝", "💵", "🧺", "🐾", "🧒", "📱", "👨", "👩", "✨", "💼",
+] as const;
+
 export const EXPENSE_CATEGORIES = [
   "Food & groceries",
   "Transport",
@@ -76,12 +81,12 @@ const tones: Record<string, { background: string; color: string; shadow: string 
   "Other spending": { background: "#f3eef8", color: "#83758e", shadow: "rgba(131, 117, 142, .16)" },
 };
 
-export function CategoryIcon({ category, className }: { category: string; className?: string }) {
-  return <span className={cn("category-emoji", className)} aria-hidden="true">{icons[category] || "🏷️"}</span>;
+export function CategoryIcon({ category, icon, className }: { category: string; icon?: string | null; className?: string }) {
+  return <span className={cn("category-emoji", className)} aria-hidden="true">{icon || icons[category] || "🏷️"}</span>;
 }
 
-export function CategoryIconBadge({ category, className, compact = false }: { category: string; className?: string; compact?: boolean }) {
+export function CategoryIconBadge({ category, icon, className, compact = false }: { category: string; icon?: string | null; className?: string; compact?: boolean }) {
   const tone = tones[category] || { background: "#f0ecf8", color: "#776d8f", shadow: "rgba(119, 109, 143, .14)" };
   const style = { background: `linear-gradient(145deg, #ffffff 0%, ${tone.background} 55%, ${tone.background} 100%)`, color: tone.color, boxShadow: `0 7px 16px ${tone.shadow}` } as CSSProperties;
-  return <span className={cn("category-icon-badge", compact && "category-icon-badge-compact", className)} style={style}><CategoryIcon category={category} /></span>;
+  return <span className={cn("category-icon-badge", compact && "category-icon-badge-compact", className)} style={style}><CategoryIcon category={category} icon={icon} /></span>;
 }

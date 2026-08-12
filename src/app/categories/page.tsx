@@ -17,12 +17,13 @@ import { toast } from "sonner";
 import { CATEGORY_COLORS } from "@/lib/utils/finance";
 import type { Category } from "@/types/database";
 import { Plus, Trash2, Pencil, Tags } from "lucide-react";
+import { CATEGORY_ICON_CHOICES, CategoryIconBadge } from "@/components/category-icon";
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Category | null>(null);
-  const [form, setForm] = useState({ name: "", type: "expense", color: "#6366f1" });
+  const [form, setForm] = useState({ name: "", type: "expense", color: "#6366f1", icon: "🏷️" });
 
   async function load() {
     const res = await fetch("/api/categories");
@@ -42,17 +43,18 @@ export default function CategoriesPage() {
       body: JSON.stringify(form),
     });
 
-    if (!res.ok) { toast.error("Failed to save category"); return; }
+    if (!res.ok) { toast.error((await res.json().catch(() => null) as { error?: string } | null)?.error || "Failed to save category"); return; }
     toast.success(editing ? "Category updated" : "Category created");
     setOpen(false);
     setEditing(null);
-    setForm({ name: "", type: "expense", color: "#6366f1" });
+    setForm({ name: "", type: "expense", color: "#6366f1", icon: "🏷️" });
     load();
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this category?")) return;
-    await fetch(`/api/categories/${id}`, { method: "DELETE" });
+    if (!confirm("Delete this category? Existing cash records will keep their history but no longer be grouped under this category.")) return;
+    const response = await fetch(`/api/categories/${id}`, { method: "DELETE" });
+    if (!response.ok) { toast.error((await response.json().catch(() => null) as { error?: string } | null)?.error || "Could not delete category"); return; }
     toast.success("Category deleted");
     load();
   }
@@ -63,7 +65,7 @@ export default function CategoriesPage() {
   return (
     <AppShell>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Categories</h1>
             <p className="text-muted-foreground">Organize your income and expenses</p>
@@ -103,6 +105,20 @@ export default function CategoriesPage() {
                     ))}
                   </div>
                 </div>
+                <div className="space-y-2">
+                  <Label>Icon</Label>
+                  <div className="grid grid-cols-5 gap-2 rounded-xl border p-3">
+                    {CATEGORY_ICON_CHOICES.map((icon) => (
+                      <button
+                        key={icon}
+                        type="button"
+                        aria-label={`Use ${icon} as the category icon`}
+                        className={`grid h-9 place-items-center rounded-lg text-lg transition-colors ${form.icon === icon ? "bg-primary/15 ring-1 ring-primary" : "hover:bg-muted"}`}
+                        onClick={() => setForm({ ...form, icon })}
+                      >{icon}</button>
+                    ))}
+                  </div>
+                </div>
                 <Button type="submit" className="w-full">{editing ? "Update" : "Create"}</Button>
               </form>
             </DialogContent>
@@ -124,14 +140,14 @@ export default function CategoriesPage() {
                       className="flex items-center justify-between rounded-xl bg-muted/40 p-3 transition-colors hover:bg-accent/40"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="h-4 w-4 rounded-full" style={{ backgroundColor: c.color }} />
+                        <CategoryIconBadge category={c.name} icon={c.icon} />
                         <span className="font-medium">{c.name}</span>
                         <Badge variant={section.variant}>{c.type}</Badge>
                       </div>
                       <div className="flex gap-1">
                         <Button variant="ghost" size="icon" onClick={() => {
                           setEditing(c);
-                          setForm({ name: c.name, type: c.type, color: c.color });
+                          setForm({ name: c.name, type: c.type, color: c.color, icon: c.icon || "🏷️" });
                           setOpen(true);
                         }}><Pencil className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="icon" onClick={() => handleDelete(c.id)}><Trash2 className="h-4 w-4" /></Button>

@@ -4,6 +4,7 @@ import {
   PiggyBank,
   CreditCard,
   ReceiptText,
+  Tags,
   WalletCards,
   type LucideIcon,
 } from "lucide-react";
@@ -30,6 +31,7 @@ export const navGroups: NavGroup[] = [
       { href: "/debts", label: "Debt accounts", icon: CreditCard },
       { href: "/budget", label: "Budget", icon: PiggyBank },
       { href: "/expenses", label: "Expenses", icon: ReceiptText },
+      { href: "/categories", label: "Categories", icon: Tags },
     ]
   }
 ];
