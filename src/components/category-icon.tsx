@@ -31,6 +31,15 @@ export const EXPENSE_CATEGORIES = [
   "Other spending",
 ] as const;
 
+export function getExpenseCategoryOptions(categories: ReadonlyArray<{ name: string; type: string }>) {
+  return Array.from(new Set([
+    ...EXPENSE_CATEGORIES,
+    ...categories
+      .filter((category) => category.type === "expense")
+      .map((category) => category.name),
+  ]));
+}
+
 const icons: Record<string, string> = {
   "Food & groceries": "🛒",
   Transport: "🚌",

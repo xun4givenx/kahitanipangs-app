@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/app-shell";
 import { CashRecordActions } from "@/components/cash-record-actions";
-import { CategoryIconBadge, EXPENSE_CATEGORIES } from "@/components/category-icon";
+import { CategoryIconBadge, getExpenseCategoryOptions } from "@/components/category-icon";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -157,6 +157,7 @@ export default function TransactionsPage() {
   }
 
   const filteredCategories = categories.filter((c) => c.type === form.type);
+  const expenseCategoryOptions = useMemo(() => getExpenseCategoryOptions(categories), [categories]);
 
   function txActions(t: (typeof transactions)[number]) {
     return (
@@ -224,9 +225,9 @@ export default function TransactionsPage() {
                       <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
                       <SelectContent>
                         {form.type === "expense"
-                          ? EXPENSE_CATEGORIES.map((name) => {
+                          ? expenseCategoryOptions.map((name) => {
                             const category = filteredCategories.find((item) => item.name === name);
-                            return <SelectItem key={name} value={category?.id || `new:${name}`}><span className="category-select-option"><CategoryIconBadge compact category={name} />{name}</span></SelectItem>;
+                            return <SelectItem key={name} value={category?.id || `new:${name}`}><span className="category-select-option"><CategoryIconBadge compact category={name} icon={category?.icon} />{name}</span></SelectItem>;
                           })
                           : filteredCategories.map((category) => <SelectItem key={category.id} value={category.id}>{category.name}</SelectItem>)}
                       </SelectContent>
