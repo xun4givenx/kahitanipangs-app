@@ -29,8 +29,12 @@ export default function SignupPage() {
 
       if (error) {
         console.error("Signup error:", error);
-        setErrorMsg(error.message);
-        toast.error(error.message);
+        let msg = error.message;
+        if (!msg || msg === "{}" || msg.toLowerCase().includes("fetch")) {
+          msg = "Unable to connect to Supabase database. Please check that your Supabase project is active (not paused) and that your project URL & API key are correct in Vercel.";
+        }
+        setErrorMsg(msg);
+        toast.error(msg);
         setLoading(false);
         return;
       }
@@ -49,7 +53,10 @@ export default function SignupPage() {
       window.location.href = "/";
     } catch (err: unknown) {
       console.error("Unexpected signup error:", err);
-      const msg = err instanceof Error ? err.message : "Failed to create account.";
+      let msg = err instanceof Error ? err.message : "Failed to create account.";
+      if (!msg || msg === "{}" || msg.toLowerCase().includes("fetch")) {
+        msg = "Unable to connect to Supabase database. Please check that your Supabase project is active (not paused) and that your project URL & API key are correct in Vercel.";
+      }
       setErrorMsg(msg);
       toast.error(msg);
       setLoading(false);

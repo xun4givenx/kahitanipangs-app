@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
@@ -16,7 +15,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const router = useRouter();
   const supabase = createClient();
 
   async function handleLogin(e: React.FormEvent) {
@@ -29,23 +27,28 @@ export default function LoginPage() {
 
       if (error) {
         console.error("Sign-in error:", error);
-        setErrorMsg(error.message);
-        toast.error(error.message);
+        let msg = error.message;
+        if (!msg || msg === "{}" || msg.toLowerCase().includes("fetch")) {
+          msg = "Unable to connect to Supabase database. Please check that your Supabase project is active (not paused) and that your project URL & API key are correct in Vercel.";
+        }
+        setErrorMsg(msg);
+        toast.error(msg);
         setLoading(false);
         return;
       }
 
       if (data?.user) {
         toast.success("Signed in successfully!");
-        // Full page reload ensures cookies are freshly attached to requests and avoids router cache race
         window.location.href = "/";
       } else {
-        router.push("/");
-        router.refresh();
+        window.location.href = "/";
       }
     } catch (err: unknown) {
       console.error("Unexpected sign-in exception:", err);
-      const msg = err instanceof Error ? err.message : "An unexpected error occurred.";
+      let msg = err instanceof Error ? err.message : "An unexpected error occurred.";
+      if (!msg || msg === "{}" || msg.toLowerCase().includes("fetch")) {
+        msg = "Unable to connect to Supabase database. Please check that your Supabase project is active (not paused) and that your project URL & API key are correct in Vercel.";
+      }
       setErrorMsg(msg);
       toast.error(msg);
       setLoading(false);
