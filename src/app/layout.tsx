@@ -4,6 +4,7 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/theme-provider";
 import { PwaRegister } from "@/components/pwa-register";
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -44,7 +45,11 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <ThemeProvider defaultTheme="light" enableSystem={false}><PwaRegister />{children}</ThemeProvider>
+        <ThemeProvider defaultTheme="light" enableSystem={false}>
+          <PwaRegister />
+          {children}
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   );

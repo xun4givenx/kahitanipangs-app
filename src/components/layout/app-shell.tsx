@@ -2,7 +2,6 @@
 
 import { Sidebar } from "@/components/layout/sidebar";
 import { MobileNav } from "@/components/layout/mobile-nav";
-import { Toaster } from "@/components/ui/sonner";
 import { Button } from "@/components/ui/button";
 import { Bell, Heart } from "lucide-react";
 import { usePathname } from "next/navigation";
@@ -54,7 +53,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
       <BudgetAlert />
-      <Toaster />
     </div>
   );
 }

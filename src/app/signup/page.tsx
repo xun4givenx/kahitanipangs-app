@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
@@ -9,36 +8,61 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Activity, ArrowRight, ShieldCheck, Wallet } from "lucide-react";
+import { Activity, AlertCircle, ArrowRight, ShieldCheck, Wallet } from "lucide-react";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const [errorMsg, setErrorMsg] = useState("");
+  const [infoMsg, setInfoMsg] = useState("");
   const supabase = createClient();
 
   async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setErrorMsg("");
+    setInfoMsg("");
 
-    const { error } = await supabase.auth.signUp({ email, password });
+    try {
+      const { data, error } = await supabase.auth.signUp({ email, password });
 
-    if (error) {
-      toast.error(error.message);
+      if (error) {
+        console.error("Signup error:", error);
+        setErrorMsg(error.message);
+        toast.error(error.message);
+        setLoading(false);
+        return;
+      }
+
+      // If email confirmation is required by Supabase, session will be null
+      if (data?.user && !data.session) {
+        const msg = "Account created! A confirmation email has been sent. Please verify your email before signing in.";
+        setInfoMsg(msg);
+        toast.info(msg);
+        setLoading(false);
+        return;
+      }
+
+      toast.success("Account created! Setting up defaults...");
+      await seedDefaults();
+      window.location.href = "/";
+    } catch (err: unknown) {
+      console.error("Unexpected signup error:", err);
+      const msg = err instanceof Error ? err.message : "Failed to create account.";
+      setErrorMsg(msg);
+      toast.error(msg);
       setLoading(false);
-      return;
     }
-
-    toast.success("Account created! Setting up defaults...");
-    await seedDefaults();
-    router.push("/");
-    router.refresh();
   }
 
   async function seedDefaults() {
-    const res = await fetch("/api/seed", { method: "POST" });
-    if (!res.ok) console.error("Failed to seed defaults");
+    try {
+      const res = await fetch("/api/seed", { method: "POST" });
+      if (!res.ok) console.error("Failed to seed defaults");
+    } catch (e) {
+      console.error("Seed error:", e);
+    }
   }
 
   return (
@@ -93,6 +117,18 @@ export default function SignupPage() {
           </div>
 
           <form onSubmit={handleSignup} className="space-y-5">
+            {errorMsg && (
+              <div className="flex items-start gap-2.5 p-3.5 text-sm rounded-lg bg-destructive/15 text-destructive border border-destructive/20 leading-relaxed">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
+            {infoMsg && (
+              <div className="flex items-start gap-2.5 p-3.5 text-sm rounded-lg bg-primary/15 text-primary border border-primary/20 leading-relaxed">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <span>{infoMsg}</span>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="email" className="text-xs uppercase tracking-wider text-muted-foreground">Email Address</Label>
               <Input

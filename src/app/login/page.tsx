@@ -9,29 +9,47 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Activity, ArrowRight, ShieldCheck, Wallet } from "lucide-react";
+import { Activity, AlertCircle, ArrowRight, ShieldCheck, Wallet } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
   const router = useRouter();
   const supabase = createClient();
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
+    setErrorMsg("");
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-    if (error) {
-      toast.error(error.message);
+      if (error) {
+        console.error("Sign-in error:", error);
+        setErrorMsg(error.message);
+        toast.error(error.message);
+        setLoading(false);
+        return;
+      }
+
+      if (data?.user) {
+        toast.success("Signed in successfully!");
+        // Full page reload ensures cookies are freshly attached to requests and avoids router cache race
+        window.location.href = "/";
+      } else {
+        router.push("/");
+        router.refresh();
+      }
+    } catch (err: unknown) {
+      console.error("Unexpected sign-in exception:", err);
+      const msg = err instanceof Error ? err.message : "An unexpected error occurred.";
+      setErrorMsg(msg);
+      toast.error(msg);
       setLoading(false);
-      return;
     }
-
-    router.push("/");
-    router.refresh();
   }
 
   return (
@@ -86,6 +104,12 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={handleLogin} className="space-y-5">
+            {errorMsg && (
+              <div className="flex items-start gap-2.5 p-3.5 text-sm rounded-lg bg-destructive/15 text-destructive border border-destructive/20 leading-relaxed">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="email" className="text-xs uppercase tracking-wider text-muted-foreground">Email Address</Label>
               <Input
