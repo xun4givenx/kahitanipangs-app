@@ -3,12 +3,19 @@ import { cookies } from "next/headers";
 
 export function createClient() {
   const cookieStore = cookies();
-  const url =
+  const url = (
     process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    process.env.NEXT_SUPABASE_URL!;
-  const key =
+    process.env.NEXT_SUPABASE_URL ||
+    ""
+  ).trim().replace(/\/+$/, "");
+
+  const key = (
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    process.env.NEXT_SUPABASE_KEY!;
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_SUPABASE_KEY ||
+    process.env.NEXT_SUPABASE_PUBLISHABLE_KEY ||
+    ""
+  ).trim();
 
   return createServerClient(
     url,

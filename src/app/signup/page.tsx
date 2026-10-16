@@ -25,14 +25,20 @@ export default function SignupPage() {
     setInfoMsg("");
 
     try {
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      const cleanEmail = email.trim().toLowerCase();
+      const cleanPassword = password;
+      const { data, error } = await supabase.auth.signUp({ email: cleanEmail, password: cleanPassword });
 
       if (error) {
         console.error("Signup error:", error);
         let msg = error.message;
         const configuredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "(not configured)";
-        if (!msg || msg === "{}" || msg.toLowerCase().includes("fetch")) {
-          msg = `Unable to connect to Supabase at "${configuredUrl}". Please verify that this URL matches your active Supabase project (Project Settings -> API -> Project URL) and that Vercel was redeployed after updating variables.`;
+        const configuredKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+
+        if (!configuredKey) {
+          msg = "Supabase API key is missing in build. Please ensure NEXT_PUBLIC_SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY is configured in Vercel and redeploy.";
+        } else if (!msg || msg === "{}" || msg.toLowerCase().includes("fetch")) {
+          msg = `Network error reaching "${configuredUrl}". If you have an ad-blocker or Brave Shields active, please pause it. Status: ${error.status || 0}, Code: ${error.code || "network_error"}`;
         }
         setErrorMsg(msg);
         toast.error(msg);
@@ -57,7 +63,7 @@ export default function SignupPage() {
       let msg = err instanceof Error ? err.message : "Failed to create account.";
       const configuredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "(not configured)";
       if (!msg || msg === "{}" || msg.toLowerCase().includes("fetch")) {
-        msg = `Unable to connect to Supabase at "${configuredUrl}". Please verify that this URL matches your active Supabase project (Project Settings -> API -> Project URL) and that Vercel was redeployed after updating variables.`;
+        msg = `Network error reaching "${configuredUrl}". If you have an ad-blocker or Brave Shields active, please pause it.`;
       }
       setErrorMsg(msg);
       toast.error(msg);
