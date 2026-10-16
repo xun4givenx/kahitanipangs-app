@@ -28,8 +28,9 @@ export default function LoginPage() {
       if (error) {
         console.error("Sign-in error:", error);
         let msg = error.message;
+        const configuredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "(not configured)";
         if (!msg || msg === "{}" || msg.toLowerCase().includes("fetch")) {
-          msg = "Unable to connect to Supabase database. Please check that your Supabase project is active (not paused) and that your project URL & API key are correct in Vercel.";
+          msg = `Unable to connect to Supabase at "${configuredUrl}". Please verify that this URL matches your active Supabase project (Project Settings -> API -> Project URL) and that Vercel was redeployed after updating variables.`;
         }
         setErrorMsg(msg);
         toast.error(msg);
@@ -46,8 +47,9 @@ export default function LoginPage() {
     } catch (err: unknown) {
       console.error("Unexpected sign-in exception:", err);
       let msg = err instanceof Error ? err.message : "An unexpected error occurred.";
+      const configuredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "(not configured)";
       if (!msg || msg === "{}" || msg.toLowerCase().includes("fetch")) {
-        msg = "Unable to connect to Supabase database. Please check that your Supabase project is active (not paused) and that your project URL & API key are correct in Vercel.";
+        msg = `Unable to connect to Supabase at "${configuredUrl}". Please verify that this URL matches your active Supabase project (Project Settings -> API -> Project URL) and that Vercel was redeployed after updating variables.`;
       }
       setErrorMsg(msg);
       toast.error(msg);
