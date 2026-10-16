@@ -37,8 +37,10 @@ export default function SignupPage() {
 
         if (!configuredKey) {
           msg = "Supabase API key is missing in build. Please ensure NEXT_PUBLIC_SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY is configured in Vercel and redeploy.";
-        } else if (!msg || msg === "{}" || msg.toLowerCase().includes("fetch")) {
-          msg = `Network error reaching "${configuredUrl}". If you have an ad-blocker or Brave Shields active, please pause it. Status: ${error.status || 0}, Code: ${error.code || "network_error"}`;
+        } else if (error.status === 500 || msg.toLowerCase().includes("database error")) {
+          msg = `Supabase Database Error: ${error.message || "Database error querying schema"}. Please run the auth.users token fix in Supabase SQL editor.`;
+        } else if (!msg || msg === "{}" || msg === "Failed to fetch" || msg === "fetch failed") {
+          msg = `Network error reaching "${configuredUrl}". If you have an ad-blocker or Brave Shields active, please pause it. Status: ${error.status || 0}`;
         }
         setErrorMsg(msg);
         toast.error(msg);
@@ -62,7 +64,9 @@ export default function SignupPage() {
       console.error("Unexpected signup error:", err);
       let msg = err instanceof Error ? err.message : "Failed to create account.";
       const configuredUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "(not configured)";
-      if (!msg || msg === "{}" || msg.toLowerCase().includes("fetch")) {
+      if (msg.toLowerCase().includes("database error")) {
+        msg = `Supabase Database Error: ${msg}. Please run the auth.users token fix in Supabase SQL editor.`;
+      } else if (!msg || msg === "{}" || msg === "Failed to fetch" || msg === "fetch failed") {
         msg = `Network error reaching "${configuredUrl}". If you have an ad-blocker or Brave Shields active, please pause it.`;
       }
       setErrorMsg(msg);
