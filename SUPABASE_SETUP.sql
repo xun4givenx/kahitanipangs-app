@@ -65,10 +65,11 @@ CREATE TABLE public.transactions (
   account_id UUID NOT NULL REFERENCES public.accounts(id) ON DELETE CASCADE,
   category_id UUID REFERENCES public.categories(id) ON DELETE SET NULL,
   scheduled_transaction_id UUID REFERENCES public.scheduled_transactions(id) ON DELETE SET NULL,
-  -- loan_id / debt_id reference tables created later below; FKs added via
-  -- ALTER TABLE after public.debts and public.loans exist (see below).
+  -- loan_id / debt_id / collection_id reference tables created later below; FKs added via
+  -- ALTER TABLE after public.debts, public.loans, and public.loan_collections exist (see below).
   loan_id UUID,
   debt_id UUID,
+  collection_id UUID,
   amount NUMERIC(12, 2) NOT NULL CHECK (amount > 0),
   type TEXT NOT NULL CHECK (type IN ('income', 'expense', 'transfer')),
   description TEXT NOT NULL DEFAULT '',
@@ -136,6 +137,7 @@ CREATE TABLE public.loans (
   advanced_interest BOOLEAN NOT NULL DEFAULT false,
   amount_released NUMERIC(12, 2) NOT NULL DEFAULT 0,
   savings_balance NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  funding_source TEXT NOT NULL DEFAULT 'reinvested' CHECK (funding_source IN ('reinvested', 'fresh_capital')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -151,7 +153,8 @@ CREATE TABLE public.loan_collections (
   collected_amount NUMERIC(12, 2) NOT NULL DEFAULT 0,
   savings_delta NUMERIC(12, 2) NOT NULL DEFAULT 0,
   note TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- Link transactions to a loan (borrower collection) or a debt (debt payment).
@@ -163,6 +166,9 @@ ALTER TABLE public.transactions
 ALTER TABLE public.transactions
   ADD CONSTRAINT transactions_debt_id_fkey FOREIGN KEY (debt_id)
     REFERENCES public.debts(id) ON DELETE SET NULL;
+ALTER TABLE public.transactions
+  ADD CONSTRAINT transactions_collection_id_fkey FOREIGN KEY (collection_id)
+    REFERENCES public.loan_collections(id) ON DELETE SET NULL;
 
 -- Indexes
 CREATE INDEX idx_categories_user_id ON public.categories(user_id);
@@ -172,6 +178,7 @@ CREATE INDEX idx_transactions_date ON public.transactions(date DESC);
 CREATE INDEX idx_transactions_account_id ON public.transactions(account_id);
 CREATE INDEX idx_transactions_loan_id ON public.transactions(loan_id);
 CREATE INDEX idx_transactions_debt_id ON public.transactions(debt_id);
+CREATE INDEX idx_transactions_collection_id ON public.transactions(collection_id);
 CREATE INDEX idx_scheduled_transactions_user_id ON public.scheduled_transactions(user_id);
 CREATE INDEX idx_scheduled_transactions_next ON public.scheduled_transactions(next_occurrence) WHERE is_active = true;
 CREATE INDEX idx_debts_user_id ON public.debts(user_id);
@@ -203,6 +210,8 @@ CREATE TRIGGER debts_updated_at BEFORE UPDATE ON public.debts
 CREATE TRIGGER debt_plans_updated_at BEFORE UPDATE ON public.debt_plans
   FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 CREATE TRIGGER loans_updated_at BEFORE UPDATE ON public.loans
+  FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
+CREATE TRIGGER loan_collections_updated_at BEFORE UPDATE ON public.loan_collections
   FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
 -- Keep account balances in sync with transactions

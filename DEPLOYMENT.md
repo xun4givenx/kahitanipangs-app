@@ -79,8 +79,8 @@ middleware, so it is **not** static-only). Vercel is the typical choice:
 3. **Framework preset:** Next.js (auto-detected). Build command `npm run build` and
    output are handled automatically.
 4. **Environment variables** — add these (same names as `.env.local`):
-   - `NEXT_PUBLIC_SUPABASE_URL` = `https://hxhgusybmacxffczesxk.supabase.co`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = your `sb_publishable_…` key
+   - `NEXT_PUBLIC_SUPABASE_URL` = `https://YOUR-PROJECT.supabase.co`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = your `sb_publishable_…` or anon key
    - `OPENAI_API_KEY` *(optional — only enables AI debt-payoff advice)*
 5. **Deploy.**
 
